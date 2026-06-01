@@ -93,6 +93,10 @@ export const PHASES: Record<Phase, PhaseTokens> = {
   },
 };
 
+function getCairoHour(): number {
+  return parseInt(new Date().toLocaleString("en-US", { timeZone: "Africa/Cairo", hour: "numeric", hour12: false }), 10);
+}
+
 // hour → phase
 function hourToPhase(hour: number): Phase {
   if (hour >= 4 && hour < 7) return "dawn";
@@ -155,11 +159,11 @@ function resolvePhase(): Phase {
   if (dev) return dev;
   const override = getPhaseOverride();
   if (override) return override;
-  return hourToPhase(new Date().getHours());
+  return hourToPhase(getCairoHour());
 }
 
 export function useTimePhase(searchStr?: string) {
-  const [phase, setPhase] = useState<Phase>(() => hourToPhase(new Date().getHours()));
+  const [phase, setPhase] = useState<Phase>(() => hourToPhase(getCairoHour()));
 
   useEffect(() => {
     setPhase(resolvePhase());
