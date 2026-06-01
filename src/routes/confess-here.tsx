@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Lock, Check, Copy, User } from "lucide-react";
+import { ArrowRight, Lock, Check, Copy, User, MessageSquare } from "lucide-react";
 import freyal from "../assets/characters/freyal.png";
 import { getOrCreateAnonId, saveRefToProfile, markIngesting, clearIngesting, markIngestionFailed, removeRefFromProfile, saveSnippet, saveOriginBrowser, detectBrowser, getBrowserDetails } from "../lib/anonIdentity";
 import { submitConfession, type SubmitPayload } from "../lib/confessSubmit";
@@ -651,7 +651,7 @@ function DoneView({ refId, onAnother }: { refId: string; onAnother: () => void }
       {/* Confess again */}
       <button
         onClick={onAnother}
-        className="w-full flex items-center justify-center px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all active:scale-[0.98]"
+        className="w-full flex items-center justify-center gap-2 px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all active:scale-[0.98]"
         style={{
           background: "rgba(255,255,255,0.07)",
           border: "1px solid rgba(255,255,255,0.14)",
@@ -659,6 +659,7 @@ function DoneView({ refId, onAnother }: { refId: string; onAnother: () => void }
           color: "rgba(242,242,242,0.55)",
         }}
       >
+        <MessageSquare size={13} strokeWidth={1.8} />
         Confess something else
       </button>
     </div>
@@ -667,14 +668,33 @@ function DoneView({ refId, onAnother }: { refId: string; onAnother: () => void }
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
+const LS_CONFESS_STAGE = "cc_last_confess_stage";
+const LS_CONFESS_REF   = "cc_last_confess_ref";
+
+function genRef() {
+  return Array.from({ length: 8 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
+}
+
 function ConfessPage() {
-  const [stage, setStage]         = useState<"write" | "chat" | "done">("write");
+  const savedStage = typeof window !== "undefined" ? localStorage.getItem(LS_CONFESS_STAGE) : null;
+  const savedRef   = typeof window !== "undefined" ? localStorage.getItem(LS_CONFESS_REF)   : null;
+
+  const [stage, setStageRaw]      = useState<"write" | "chat" | "done">(savedStage === "done" ? "done" : "write");
   const [body, setBody]           = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const refId = useRef(
-    Array.from({ length: 8 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("")
-  );
+  const refId = useRef(savedStage === "done" && savedRef ? savedRef : genRef());
+
+  function setStage(s: "write" | "chat" | "done") {
+    setStageRaw(s);
+    if (s === "done") {
+      localStorage.setItem(LS_CONFESS_STAGE, "done");
+      localStorage.setItem(LS_CONFESS_REF, refId.current);
+    } else {
+      localStorage.removeItem(LS_CONFESS_STAGE);
+      localStorage.removeItem(LS_CONFESS_REF);
+    }
+  }
 
   useEffect(() => { getOrCreateAnonId(); }, []);
 
@@ -869,7 +889,7 @@ function ConfessPage() {
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
           >
             <DoneView refId={refId.current} onAnother={() => {
-              refId.current = Array.from({ length: 8 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
+              refId.current = genRef();
               setBody("");
               setStage("write");
             }} />

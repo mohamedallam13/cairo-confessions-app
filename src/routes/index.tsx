@@ -91,7 +91,7 @@ function Home() {
 
         <Link
           to="/track"
-          search={{ t: undefined }}
+          search={{ t: undefined, recover: undefined }}
           className="group flex items-center gap-4 w-full px-6 py-5 transition-all active:scale-[0.98]"
           style={{
             background: `linear-gradient(135deg, var(--phase-card-tint, rgba(4,201,244,0.10)), rgba(15,18,20,0.70))`,

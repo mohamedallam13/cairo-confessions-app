@@ -10,6 +10,7 @@ import { createRecoveryToken, redeemRecoveryToken } from "../lib/recoveryToken";
 export const Route = createFileRoute("/track")({
   validateSearch: (search: Record<string, unknown>) => ({
     t: typeof search.t === "string" ? search.t : undefined, // transfer token (direct link)
+    recover: search.recover === "1" ? "1" : undefined,      // open recover modal directly
   }),
   head: () => ({
     meta: [
@@ -462,59 +463,6 @@ function ResultView({
               </a>
             )}
 
-            {/* Cancel — shown when pending (active) or posted/scheduled (inactive) */}
-            {!terminal && !isIngesting && !isIngestionFailed && latest && latest !== "pending" && (
-              <div className="pt-1 border-t border-white/5">
-                <button
-                  disabled
-                  className="w-full py-3 rounded-xl text-[11px] uppercase tracking-[0.16em] font-semibold opacity-20 cursor-not-allowed"
-                  style={{ background: "rgba(220,60,60,0.10)", border: "1px solid rgba(220,60,60,0.20)", color: "rgba(220,80,80,0.9)" }}
-                >
-                  Cancel my confession
-                </button>
-                <p className="text-cc-off/20 text-[10.5px] text-center mt-1.5">
-                  {latest === "posted" ? "Already posted — cannot be canceled." : "Can no longer be canceled at this stage."}
-                </p>
-              </div>
-            )}
-            {canCancel && (
-              <div className="pt-1 border-t border-white/5 space-y-2">
-                {!confirmCancel ? (
-                  <button
-                    onClick={() => setConfirmCancel(true)}
-                    className="w-full py-3.5 rounded-xl text-[12px] uppercase tracking-[0.16em] font-semibold transition-all active:scale-[0.98]"
-                    style={{ background: "rgba(220,60,60,0.18)", border: "1px solid rgba(220,60,60,0.45)", color: "rgba(220,80,80,1)" }}
-                  >
-                    Cancel my confession
-                  </button>
-                ) : (
-                  <div className="space-y-3">
-                    <p className="text-cc-off/50 text-[13px] leading-relaxed text-center">Are you sure you want to cancel?</p>
-                    <div className="flex gap-3">
-                      <button
-                        onClick={doCancel}
-                        disabled={cancelLoading}
-                        className="flex-1 py-3 text-[11px] uppercase tracking-[0.14em] rounded-xl font-semibold transition-all active:scale-95 disabled:opacity-50"
-                        style={{ background: "rgba(220,60,60,0.20)", border: "1px solid rgba(220,60,60,0.45)", color: "rgba(220,80,80,1)" }}
-                      >
-                        {cancelLoading ? "Canceling…" : "Yes, cancel it"}
-                      </button>
-                      <button
-                        onClick={() => setConfirmCancel(false)}
-                        disabled={cancelLoading}
-                        className="flex-1 py-3 text-[11px] uppercase tracking-[0.14em] rounded-xl text-cc-off/50 hover:text-cc-off/80 transition-colors disabled:opacity-50"
-                        style={{ border: "1px solid rgba(255,255,255,0.10)" }}
-                      >
-                        Keep it
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {cancelError && (
-                  <p className="text-[11px] text-center" style={{ color: "rgba(220,80,80,0.7)" }}>{cancelError}</p>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Serial + ref numbers */}
@@ -588,7 +536,60 @@ function ResultView({
               )}
             </div>
           )}
-        </div>
+        {/* Cancel — at the bottom, out of the way */}
+        {!terminal && !isIngesting && !isIngestionFailed && latest && latest !== "pending" && (
+          <div className="pt-2 border-t border-white/5">
+            <button
+              disabled
+              className="w-full py-3 rounded-xl text-[11px] uppercase tracking-[0.16em] font-semibold opacity-20 cursor-not-allowed"
+              style={{ background: "rgba(220,60,60,0.10)", border: "1px solid rgba(220,60,60,0.20)", color: "rgba(220,80,80,0.9)" }}
+            >
+              Cancel my confession
+            </button>
+            <p className="text-cc-off/20 text-[10.5px] text-center mt-1.5">
+              {latest === "posted" ? "Already posted — cannot be canceled." : "Can no longer be canceled at this stage."}
+            </p>
+          </div>
+        )}
+        {canCancel && (
+          <div className="pt-2 border-t border-white/5 space-y-2">
+            {!confirmCancel ? (
+              <button
+                onClick={() => setConfirmCancel(true)}
+                className="w-full py-3.5 rounded-xl text-[12px] uppercase tracking-[0.16em] font-semibold transition-all active:scale-[0.98]"
+                style={{ background: "rgba(220,60,60,0.18)", border: "1px solid rgba(220,60,60,0.45)", color: "rgba(220,80,80,1)" }}
+              >
+                Cancel my confession
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-cc-off/50 text-[13px] leading-relaxed text-center">Are you sure you want to cancel?</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={doCancel}
+                    disabled={cancelLoading}
+                    className="flex-1 py-3 text-[11px] uppercase tracking-[0.14em] rounded-xl font-semibold transition-all active:scale-95 disabled:opacity-50"
+                    style={{ background: "rgba(220,60,60,0.20)", border: "1px solid rgba(220,60,60,0.45)", color: "rgba(220,80,80,1)" }}
+                  >
+                    {cancelLoading ? "Canceling…" : "Yes, cancel it"}
+                  </button>
+                  <button
+                    onClick={() => setConfirmCancel(false)}
+                    disabled={cancelLoading}
+                    className="flex-1 py-3 text-[11px] uppercase tracking-[0.14em] rounded-xl text-cc-off/50 hover:text-cc-off/80 transition-colors disabled:opacity-50"
+                    style={{ border: "1px solid rgba(255,255,255,0.10)" }}
+                  >
+                    Keep it
+                  </button>
+                </div>
+              </div>
+            )}
+            {cancelError && (
+              <p className="text-[11px] text-center" style={{ color: "rgba(220,80,80,0.7)" }}>{cancelError}</p>
+            )}
+          </div>
+        )}
+      </div>
       )}
 
       {/* ── Messages tab ── */}
@@ -1008,7 +1009,7 @@ function TransferOutModal({ anonId, onClose }: { anonId: string; onClose: () => 
   );
 }
 
-// ─── Import-session modal (Recover session) ───────────────────────────────────
+// ─── Import-session modal (Recover Space) ───────────────────────────────────
 
 function ImportModal({
   prefilledToken,
@@ -1079,7 +1080,7 @@ function ImportModal({
       >
         <div className="space-y-1.5">
           <h2 className="font-display text-[1.1rem] uppercase tracking-[0.16em] text-cc-off">
-            {hasToken ? "Complete your transfer" : "Recover your session"}
+            Recover Your Space
           </h2>
           <p className="text-cc-off/40 text-[13px] leading-[1.7]">
             {hasToken
@@ -1171,8 +1172,8 @@ function TrackPage() {
   // ── Origin browser mismatch banner ──
   const [showOriginBanner, setShowOriginBanner] = useState(false);
   useEffect(() => {
-    const origin  = getOriginBrowser();
-    const current = detectBrowser();
+    const origin  = getOriginBrowser()?.trim().toLowerCase();
+    const current = detectBrowser()?.trim().toLowerCase();
     if (origin && current && origin !== current) setShowOriginBanner(true);
   }, []);
 
@@ -1294,15 +1295,16 @@ function TrackPage() {
     };
   }, [runPoll]);
 
-  // Auto-open import modal when ?t is in URL (direct transfer link)
+  // Auto-open import modal when ?t or ?recover=1 is in URL
   useEffect(() => {
-    if (search.t) setShowImportModal(true);
+    if (search.t || search.recover === "1") setShowImportModal(true);
+    if (search.recover === "1") navigate({ to: "/track", search: { t: undefined, recover: undefined }, replace: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
   function handleImported() {
-    navigate({ to: "/track", search: { t: undefined }, replace: true });
+    navigate({ to: "/track", search: { t: undefined, recover: undefined }, replace: true });
     setAnonId(getOrCreateAnonId());
     setMyRefs(getMyRefs());
     setShowImportModal(false);
@@ -1437,7 +1439,7 @@ function TrackPage() {
       </div>
       <div className="flex flex-col items-end gap-1.5 shrink-0">
         <button
-          onClick={() => { setShowTransferOut(true); setShowOriginBanner(false); }}
+          onClick={() => { setShowImportModal(true); setShowOriginBanner(false); }}
           className="text-[10px] uppercase tracking-[0.16em] font-semibold transition-opacity hover:opacity-80"
           style={{ color: "var(--phase-accent,#04C9F4)" }}
         >
@@ -1461,7 +1463,7 @@ function TrackPage() {
       {(showImportModal || pendingToken) && (
         <ImportModal
           prefilledToken={pendingToken}
-          onClose={() => { setShowImportModal(false); if (pendingToken) navigate({ to: "/track", search: { t: undefined }, replace: true }); }}
+          onClose={() => { setShowImportModal(false); if (pendingToken) navigate({ to: "/track", search: { t: undefined, recover: undefined }, replace: true }); }}
           onImported={handleImported}
         />
       )}
@@ -1561,7 +1563,7 @@ function TrackPage() {
           className="rounded-2xl p-4 space-y-3"
           style={{ background: "rgba(8,10,12,0.75)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}
         >
-          <p className="text-[9px] uppercase tracking-[0.2em] text-cc-off/60 text-center font-semibold">This browser</p>
+          <p className="text-[9px] uppercase tracking-[0.2em] text-cc-off/60 text-center font-semibold">My Space Settings</p>
           <div className="space-y-2">
             <button
               onClick={() => setShowImportModal(true)}
@@ -1573,7 +1575,7 @@ function TrackPage() {
               }}
             >
               <Download size={13} strokeWidth={1.8} />
-              Recover session
+              Recover Space
             </button>
             <button
               onClick={() => setShowTransferOut(true)}
@@ -1645,7 +1647,7 @@ function TrackPage() {
         className="rounded-2xl p-4 space-y-3"
         style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
       >
-        <p className="text-[9px] uppercase tracking-[0.2em] text-cc-off/20 text-center">This browser</p>
+        <p className="text-[9px] uppercase tracking-[0.2em] text-cc-off/20 text-center">My Space Settings</p>
         <div className="space-y-2">
           <button
             onClick={() => setShowImportModal(true)}
@@ -1657,7 +1659,7 @@ function TrackPage() {
             }}
           >
             <Download size={13} strokeWidth={1.8} />
-            Recover session
+            Recover Space
           </button>
           <button
             onClick={() => setShowTransferOut(true)}

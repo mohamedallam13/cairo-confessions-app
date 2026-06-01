@@ -1,8 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, Outlet, useLocation, useRouter } from "@tanstack/react-router";
 import { Library, Mail, ChevronLeft } from "lucide-react";
-import { getIngestingRefs, getOrCreateAnonId, isNewIdentity, detectBrowser, getMyRefs, adoptSession } from "../lib/anonIdentity";
-import { redeemRecoveryToken } from "../lib/recoveryToken";
+import { getIngestingRefs, getOrCreateAnonId, isNewIdentity, detectBrowser, getMyRefs } from "../lib/anonIdentity";
 import { PHASES, type Phase, getPhaseOverride, setPhaseOverride } from "../hooks/useTimePhase";
 
 // ─── Identity reveal modal ───────────────────────────────────────────────────
@@ -63,17 +62,6 @@ function stripSessionParams() {
   history.replaceState(null, "", url.toString());
 }
 
-function extractToken(input: string): string | null {
-  const trimmed = input.trim();
-  try {
-    const url = new URL(trimmed.includes("://") ? trimmed : `https://x.cc/${trimmed}`);
-    const t = url.searchParams.get("t");
-    if (t) return t;
-  } catch { /* not a URL */ }
-  if (/^[A-Za-z0-9_-]{8,}$/.test(trimmed)) return trimmed;
-  return null;
-}
-
 // ─── Session conflict modal ───────────────────────────────────────────────────
 
 function SessionConflictModal({
@@ -82,61 +70,15 @@ function SessionConflictModal({
   incomingBrowser,
   localAnonId,
   onDismiss,
-  onImported,
+  onRecover,
 }: {
   caseType: "case1" | "case3";
   incomingAnonId: string;
   incomingBrowser: string | null;
   localAnonId: string;
   onDismiss: () => void;
-  onImported: () => void;
+  onRecover: () => void;
 }) {
-  const [step, setStep]       = useState<"prompt" | "instructions" | "import">("prompt");
-  const [linkInput, setLink]  = useState("");
-  const [refInput, setRef]    = useState("");
-  const [loading, setLoading] = useState(false);
-  const [err, setErr]         = useState("");
-
-  async function doImport() {
-    setErr("");
-    const token = extractToken(linkInput);
-    const ref   = refInput.trim().toUpperCase();
-    if (!token) { setErr("Paste a valid transfer link."); return; }
-    if (!/^[A-Z0-9]{8}$/.test(ref)) { setErr("Reference number must be 8 characters."); return; }
-
-    setLoading(true);
-    let res: { ok: boolean; anonId?: string; refNums?: unknown[]; error?: string };
-    try {
-      const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("timeout")), 35000)
-      );
-      res = await Promise.race([
-        (redeemRecoveryToken as unknown as (opts: { data: { recoveryToken: string; refNum: string } }) => Promise<typeof res>)({ data: { recoveryToken: token, refNum: ref } } as never),
-        timeout,
-      ]);
-    } catch {
-      setLoading(false);
-      setErr("Something went wrong. Try again.");
-      return;
-    }
-    setLoading(false);
-
-    if (!res.ok) {
-      const msg = res.error === "expired"       ? "This link has expired. Ask for a new one."
-                : res.error === "wrong_ref"     ? "That reference number doesn't match this session."
-                : res.error === "invalid_token" ? "This link is invalid or has already been used."
-                : "Something went wrong. Try again.";
-      setErr(msg);
-      return;
-    }
-
-    const refNums = (res.refNums ?? []).map((r: unknown) =>
-      typeof r === "string" ? r : (r as { refNum: string }).refNum
-    );
-    adoptSession(res.anonId!, refNums);
-    onImported();
-  }
-
   const fromLabel = incomingBrowser ? ` from ${incomingBrowser}` : "";
 
   return (
@@ -148,129 +90,33 @@ function SessionConflictModal({
         className="w-full max-w-lg rounded-2xl p-6 space-y-5"
         style={{ background: "rgba(12,15,18,0.97)", border: "1px solid rgba(255,255,255,0.10)" }}
       >
-        {step === "prompt" && (
-          <>
-            <div className="space-y-2">
-              <p className="font-display text-[1rem] uppercase tracking-[0.14em]" style={{ color: "var(--phase-accent,#04C9F4)" }}>
-                {incomingAnonId}
-              </p>
-              <p className="text-cc-off/70 text-[14px] leading-[1.7]">
-                was here{fromLabel}.
-              </p>
-              <p className="text-cc-off text-[16px] font-semibold">Is that you?</p>
-              {caseType === "case3" && (
-                <p className="text-cc-off/35 text-[12px]">You're currently <span className="font-display" style={{ color: "rgba(var(--phase-accent-rgb,4,201,244),0.6)" }}>{localAnonId}</span>.</p>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => setStep("import")}
-                className="w-full py-3 font-display text-[11px] uppercase tracking-[0.18em] rounded-xl transition-all active:scale-95"
-                style={{ background: "linear-gradient(135deg, var(--phase-accent,#04C9F4), rgba(var(--phase-accent-rgb,4,201,244),0.75))", color: "#050606" }}
-              >
-                Yes — I have a transfer link
-              </button>
-              <button
-                onClick={() => setStep("instructions")}
-                className="w-full py-3 text-[11px] uppercase tracking-[0.14em] rounded-xl text-cc-off/60 hover:text-cc-off/80 transition-colors"
-                style={{ border: "1px solid rgba(255,255,255,0.08)" }}
-              >
-                Yes — I need to get one
-              </button>
-              <button
-                onClick={onDismiss}
-                className="w-full py-2 text-[10px] uppercase tracking-[0.14em] text-cc-off/25 hover:text-cc-off/50 transition-colors"
-              >
-                {caseType === "case1" ? "Start fresh" : "Keep mine"}
-              </button>
-            </div>
-          </>
-        )}
-
-        {step === "instructions" && (
-          <>
-            <div className="space-y-2">
-              <p className="font-display text-[1rem] uppercase tracking-[0.14em]" style={{ color: "var(--phase-accent,#04C9F4)" }}>
-                Get your transfer link
-              </p>
-              <p className="text-cc-off/60 text-[13px] leading-[1.8]">
-                On the original browser{incomingBrowser ? ` (${incomingBrowser})` : ""}, open your Mine tab and tap <span className="text-cc-off font-semibold">Get transfer link</span>. Copy the link it gives you, then come back here.
-              </p>
-              <p className="text-cc-off/30 text-[11px] leading-[1.6]">
-                The link expires in 15 minutes.
-              </p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => setStep("import")}
-                className="w-full py-3 font-display text-[11px] uppercase tracking-[0.18em] rounded-xl transition-all active:scale-95"
-                style={{ background: "linear-gradient(135deg, var(--phase-accent,#04C9F4), rgba(var(--phase-accent-rgb,4,201,244),0.75))", color: "#050606" }}
-              >
-                I have the link →
-              </button>
-              <button
-                onClick={() => setStep("prompt")}
-                className="w-full py-2 text-[10px] uppercase tracking-[0.14em] text-cc-off/25 hover:text-cc-off/50 transition-colors"
-              >
-                ← Back
-              </button>
-            </div>
-          </>
-        )}
-
-        {step === "import" && (
-          <>
-            <div className="space-y-1.5">
-              <h2 className="font-display text-[1rem] uppercase tracking-[0.16em] text-cc-off">Transfer your session</h2>
-              <p className="text-cc-off/40 text-[12px] leading-[1.7]">
-                Go to your original browser, tap "Get transfer link", and paste it below. Then enter one of your reference numbers.
-              </p>
-            </div>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase tracking-[0.18em] text-cc-off/30">Transfer link</label>
-                <input
-                  value={linkInput}
-                  onChange={(e) => { setLink(e.target.value); setErr(""); }}
-                  placeholder="Paste your transfer link here"
-                  className="w-full bg-transparent px-4 py-3 rounded-xl text-cc-off/80 placeholder:text-cc-off/20 text-[13px] focus:outline-none"
-                  style={{ border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)" }}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase tracking-[0.18em] text-cc-off/30">Reference number</label>
-                <input
-                  value={refInput}
-                  onChange={(e) => { setRef(e.target.value.toUpperCase()); setErr(""); }}
-                  onKeyDown={(e) => e.key === "Enter" && doImport()}
-                  placeholder="e.g. AB12CD34"
-                  maxLength={8}
-                  className="w-full bg-transparent px-4 py-3 rounded-xl text-cc-off font-display uppercase tracking-widest placeholder:text-cc-off/20 text-[14px] focus:outline-none"
-                  style={{ border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)" }}
-                />
-              </div>
-            </div>
-            {err && <p className="text-[11px]" style={{ color: "rgba(220,80,80,0.8)" }}>{err}</p>}
-            <div className="flex gap-3">
-              <button
-                onClick={doImport}
-                disabled={loading}
-                className="flex-1 py-3 font-display text-[11px] uppercase tracking-[0.18em] rounded-xl transition-all active:scale-95 disabled:opacity-40"
-                style={{ background: "linear-gradient(135deg, var(--phase-accent,#04C9F4), rgba(var(--phase-accent-rgb,4,201,244),0.75))", color: "#050606" }}
-              >
-                {loading ? "Verifying…" : "Import session"}
-              </button>
-              <button
-                onClick={() => setStep("prompt")}
-                disabled={loading}
-                className="px-5 py-3 text-[11px] uppercase tracking-[0.14em] rounded-xl text-cc-off/40 hover:text-cc-off/70 transition-colors disabled:opacity-30"
-                style={{ border: "1px solid rgba(255,255,255,0.08)" }}
-              >
-                Back
-              </button>
-            </div>
-          </>
-        )}
+        <div className="space-y-2">
+          <p className="font-display text-[1rem] uppercase tracking-[0.14em]" style={{ color: "var(--phase-accent,#04C9F4)" }}>
+            {incomingAnonId}
+          </p>
+          <p className="text-cc-off/70 text-[14px] leading-[1.7]">
+            was here{fromLabel}.
+          </p>
+          <p className="text-cc-off text-[16px] font-semibold">Is that you?</p>
+          {caseType === "case3" && (
+            <p className="text-cc-off/35 text-[12px]">You're currently <span className="font-display" style={{ color: "rgba(var(--phase-accent-rgb,4,201,244),0.6)" }}>{localAnonId}</span>.</p>
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={onRecover}
+            className="w-full py-3 font-display text-[11px] uppercase tracking-[0.18em] rounded-xl transition-all active:scale-95"
+            style={{ background: "linear-gradient(135deg, var(--phase-accent,#04C9F4), rgba(var(--phase-accent-rgb,4,201,244),0.75))", color: "#050606" }}
+          >
+            Yes — Recover My Space →
+          </button>
+          <button
+            onClick={onDismiss}
+            className="w-full py-2 text-[10px] uppercase tracking-[0.14em] text-cc-off/25 hover:text-cc-off/50 transition-colors"
+          >
+            {caseType === "case1" ? "Not me — Start fresh" : "Not me — Keep mine"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -454,13 +300,6 @@ export default function Layout() {
     injectSessionParams(anonId, browser);
   }
 
-  function handleConflictImported() {
-    setSessionConflict(null);
-    stripSessionParams();
-    // Navigate to track to show imported session
-    router.navigate({ to: "/track", search: { t: undefined } });
-  }
-
   useEffect(() => {
     function check() { setHasIngesting(getIngestingRefs().length > 0); }
     if (pathname === "/track") {
@@ -509,7 +348,10 @@ export default function Layout() {
           incomingBrowser={incomingBrowser}
           localAnonId={localAnonId}
           onDismiss={handleConflictDismiss}
-          onImported={handleConflictImported}
+          onRecover={() => {
+            setSessionConflict(null);
+            router.navigate({ to: "/track", search: { t: undefined, recover: "1" } });
+          }}
         />
       )}
 
@@ -593,7 +435,7 @@ export default function Layout() {
             <div className="flex items-center justify-center">
               <Link
                 to="/track"
-                search={{ t: undefined }}
+                search={{ t: undefined, recover: undefined }}
                 className="relative flex flex-col items-center justify-center gap-1.5 px-5 py-1.5 rounded-full"
                 style={{
                   color: pathname === "/track" ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)",
@@ -619,7 +461,7 @@ export default function Layout() {
                     <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
                   )}
                 </div>
-                <span className="text-[8.5px] font-bold uppercase tracking-[0.18em] relative z-10">Mine</span>
+                <span className="text-[8.5px] font-bold uppercase tracking-[0.18em] relative z-10">My Space</span>
               </Link>
             </div>
 
