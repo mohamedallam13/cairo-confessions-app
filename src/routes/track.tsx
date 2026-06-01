@@ -1061,9 +1061,13 @@ function ImportModal({
       return;
     }
 
-    const refNums = (res.refNums ?? []).map((r: unknown) =>
-      typeof r === "string" ? r : (r as { refNum: string }).refNum
-    );
+    const refNums = [...(res.refNums ?? [])]
+      .sort((a: unknown, b: unknown) => {
+        const ta = (a && typeof a === "object" ? (a as { timestamp?: string }).timestamp : "") ?? "";
+        const tb = (b && typeof b === "object" ? (b as { timestamp?: string }).timestamp : "") ?? "";
+        return tb.localeCompare(ta); // newest first
+      })
+      .map((r: unknown) => typeof r === "string" ? r : (r as { refNum: string }).refNum);
     adoptSession(res.anonId!, refNums);
     onImported();
   }
@@ -1310,6 +1314,7 @@ function TrackPage() {
     setAnonId(getOrCreateAnonId());
     setMyRefs(getMyRefs());
     setShowImportModal(false);
+    runPoll();
   }
 
   function openRef(ref: string) {

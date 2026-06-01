@@ -756,16 +756,10 @@ function ConfessPage() {
         markIngestionFailed(ref);
         setStage("done");
       }
-    } catch (err) {
-      if ((err as Error)?.message === "timeout") {
-        // GAS is slow but likely received the request — leave ref as ingesting,
-        // track page will poll immediately and resolve it within ~10s
-        setStage("done");
-      } else {
-        clearIngesting(ref);
-        removeRefFromProfile(ref);
-        setSubmitError("Connection error. Please check your network and try again.");
-      }
+    } catch {
+      // Client 32s timeout OR CF Worker kill (~30s) — both mean GAS may have
+      // received the confession. Stay ingesting; poll will resolve.
+      setStage("done");
     } finally {
       setSubmitting(false);
     }
