@@ -9,6 +9,20 @@
 
 ---
 
+## Screenshots
+
+The UI shifts with Cairo's time of day — 6 phases, each with its own color palette and atmosphere.
+
+| Dawn | Morning | Midday |
+|------|---------|--------|
+| ![Dawn](public/screenshots/dawn.png) | ![Morning](public/screenshots/morning.png) | ![Midday](public/screenshots/midday.png) |
+
+| Sunset | Dusk | Night |
+|--------|------|-------|
+| ![Sunset](public/screenshots/sunset.png) | ![Dusk](public/screenshots/dusk.png) | ![Night](public/screenshots/night.png) |
+
+---
+
 ## What it is
 
 Cairo Confessions App V1 is the first unified digital platform for the Cairo Confessions community. It lets people anonymously submit confessions, track their status, and eventually connect through shared threads — all without creating an account.
