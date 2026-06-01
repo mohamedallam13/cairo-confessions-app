@@ -1,0 +1,161 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@font-face {
+  font-family: 'Acumin Pro Condensed';
+  src: url('/fonts/Acumin Pro Cond Bold.otf') format('opentype');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Acumin Pro Condensed';
+  src: url('/fonts/Acumin Pro Cond Book.otf') format('opentype');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@theme inline {
+  --font-display: 'Acumin Pro Condensed', 'Barlow Condensed', system-ui, sans-serif;
+  --font-sans: system-ui, sans-serif;
+  --font-arabic: 'Cairo', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* CC brand tokens */
+  --color-cc-black: var(--cc-black);
+  --color-cc-near: var(--cc-near);
+  --color-cc-off: var(--cc-off);
+  --color-cc-paper: var(--cc-paper);
+  --color-cc-cyan: var(--cc-cyan);
+  --color-cc-slate: var(--cc-slate);
+  --color-cc-blue2: var(--cc-blue2);
+  --color-cc-green: var(--cc-green);
+  --color-cc-sage: var(--cc-sage);
+  --color-cc-light-sage: var(--cc-light-sage);
+  --color-cc-ink: var(--cc-ink);
+  --color-cc-mute: var(--cc-mute);
+  --color-cc-line: var(--cc-line);
+}
+
+:root {
+  --radius: 0.5rem;
+
+  /* Master palette */
+  --cc-black:      #000000;
+  --cc-near:       #050606;        /* confession depth */
+  --cc-off:        #F2F2F2;        /* page off-white */
+  --cc-paper:      #E8E5DE;        /* warmer off-white panel */
+  --cc-cyan:       #04C9F4;        /* primary energetic accent */
+  --cc-slate:      #2D9FDB;        /* confession accent */
+  --cc-blue2:      #7DC6E2;        /* lighter digital */
+  --cc-green:      #03A075;        /* trust */
+  --cc-sage:       #87BDAC;        /* support tone */
+  --cc-light-sage: #E0EAD1;        /* reading panel */
+  --cc-ink:        #0B0D0E;
+  --cc-mute:       #5C5F61;
+  --cc-line:       rgba(5,6,6,0.12);
+
+  /* semantic — light field */
+  --background: var(--cc-off);
+  --foreground: var(--cc-ink);
+  --card: #FFFFFF;
+  --card-foreground: var(--cc-ink);
+  --popover: #FFFFFF;
+  --popover-foreground: var(--cc-ink);
+  --primary: var(--cc-near);
+  --primary-foreground: var(--cc-off);
+  --secondary: var(--cc-paper);
+  --secondary-foreground: var(--cc-ink);
+  --muted: var(--cc-paper);
+  --muted-foreground: var(--cc-mute);
+  --accent: var(--cc-cyan);
+  --accent-foreground: var(--cc-near);
+  --destructive: #B0322B;
+  --destructive-foreground: #FFFFFF;
+  --border: var(--cc-line);
+  --input: rgba(5,6,6,0.10);
+  --ring: var(--cc-cyan);
+}
+
+.dark {
+  --background: var(--cc-near);
+  --foreground: var(--cc-off);
+  --card: #0E1112;
+  --card-foreground: var(--cc-off);
+  --popover: #0E1112;
+  --popover-foreground: var(--cc-off);
+  --primary: var(--cc-cyan);
+  --primary-foreground: var(--cc-near);
+  --muted: #14181A;
+  --muted-foreground: #9AA0A3;
+  --border: rgba(242,242,242,0.10);
+  --input: rgba(242,242,242,0.14);
+}
+
+/* Prevent iOS auto-zoom on input focus — inputs below 16px font-size trigger zoom */
+@media (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+  html, body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    /* Subtle Cairo concrete-paper texture, no pastel gradients */
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(5,6,6,0.045) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+    font-weight: 700;
+    text-transform: none;
+  }
+  .font-display { font-family: var(--font-display); }
+  .font-arabic { font-family: var(--font-arabic); }
+  .font-serif { font-family: var(--font-serif); }
+}
+
+/* CC concentric ring motif — partial, structural, never decorative wallpaper */
+.cc-rings {
+  background-image:
+    radial-gradient(circle at 100% 0%, transparent 0, transparent 80px, rgba(5,6,6,0.08) 81px, rgba(5,6,6,0.08) 82px, transparent 83px),
+    radial-gradient(circle at 100% 0%, transparent 0, transparent 130px, rgba(5,6,6,0.06) 131px, rgba(5,6,6,0.06) 132px, transparent 133px),
+    radial-gradient(circle at 100% 0%, transparent 0, transparent 200px, rgba(5,6,6,0.04) 201px, rgba(5,6,6,0.04) 202px, transparent 203px);
+}

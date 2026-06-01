@@ -1,0 +1,882 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, Lock, Check, Copy, User } from "lucide-react";
+import freyal from "../assets/characters/freyal.png";
+import { getOrCreateAnonId, saveRefToProfile, markIngesting, clearIngesting, markIngestionFailed, removeRefFromProfile, saveSnippet, saveOriginBrowser, detectBrowser, getBrowserDetails } from "../lib/anonIdentity";
+import { submitConfession, type SubmitPayload } from "../lib/confessSubmit";
+
+export const Route = createFileRoute("/confess-here")({
+  head: () => ({
+    meta: [
+      { title: "Confess — Cairo Confessions" },
+      { name: "description", content: "Say what you carry. No name. No judgment." },
+    ],
+  }),
+  component: ConfessPage,
+});
+
+// ─── Flow config ───────────────────────────────────────────────────────────────
+
+type InputType = "chips" | "multichips" | "text" | "age" | "info" | "refreveal" | "submit";
+
+interface FlowStep {
+  id: string;
+  message: string;
+  type: InputType;
+  options?: string[];
+  skip?: boolean;
+  skipLabel?: string;
+}
+
+const FLOW: FlowStep[] = [
+  {
+    id: "mood",
+    message: "How are you feeling?",
+    type: "chips",
+    options: ["Happy", "Sad", "Meh"],
+  },
+  {
+    id: "gender",
+    message: "Are you male or female?",
+    type: "chips",
+    options: ["Male", "Female"],
+  },
+  {
+    id: "age",
+    message: "How old are you?",
+    type: "age",
+  },
+  {
+    id: "location",
+    message: "Where are you located?",
+    type: "chips",
+    options: [
+      "Greater Cairo",
+      "Alexandria",
+      "Delta Region",
+      "Suez Canal & Sinai",
+      "Northern Upper Egypt",
+      "Asyut Region",
+      "South Upper Egypt",
+      "Outside Egypt",
+    ],
+  },
+  {
+    id: "facebook_notice",
+    message: "Please be aware that your confession will be posted on CC's Facebook Page. We cannot take down confessions once submitted.",
+    type: "info",
+  },
+  {
+    id: "email",
+    message: "If you'd like to be notified when your confession goes live, leave an email. It's optional and your identity stays 100% anonymous.",
+    type: "text",
+    skip: true,
+    skipLabel: "No thanks",
+  },
+  {
+    id: "category",
+    message: "Your confession mainly revolves around a/an ________.",
+    type: "chips",
+    options: [
+      "Relationship issue",
+      "Loneliness issue",
+      "Family issue",
+      "Marriage issue",
+      "Homosexuality issue",
+      "Sexuality issue",
+      "Situation / Incident",
+      "Self Harm",
+      "Drugs",
+      "Religious issue",
+      "Society issue",
+      "Academic Advice",
+      "Confusion / Feeling lost",
+      "Self Esteem",
+      "Psychological issue",
+      "Inspirational story",
+    ],
+  },
+  {
+    id: "tags",
+    message: "Tag your confession — pick all that apply.",
+    type: "multichips",
+    options: ["Dream", "Pain", "Lie", "Guilt", "Fantasy", "Random Feeling", "Truth", "Wild Incident", "First Experience", "Rant", "Opinion"],
+  },
+  {
+    id: "refreveal",
+    message: "One last thing before you submit — this is your reference number. It's the only link between you and your confession. Save it somewhere safe. Do NOT share it with anyone.",
+    type: "refreveal",
+  },
+  {
+    id: "submit",
+    message: "Ready? Your confession hasn't been sent yet. Hit the button below to submit it now.",
+    type: "submit",
+  },
+];
+
+// ─── Avatars ───────────────────────────────────────────────────────────────────
+
+function FreyalAvatar() {
+  return (
+    <img
+      src={freyal}
+      alt="Freyal"
+      className="shrink-0 w-7 h-7 rounded-full object-cover"
+      style={{ border: "1px solid rgba(var(--phase-accent-rgb,4,201,244),0.25)" }}
+    />
+  );
+}
+
+function AnonAvatar() {
+  return (
+    <div
+      className="shrink-0 w-7 h-7 rounded-full grid place-items-center"
+      style={{
+        background: "rgba(255,255,255,0.08)",
+        border: "1px solid rgba(255,255,255,0.12)",
+      }}
+    >
+      <User size={13} strokeWidth={1.8} className="text-cc-off/40" />
+    </div>
+  );
+}
+
+// ─── Chat bubbles ──────────────────────────────────────────────────────────────
+
+function BotBubble({ content }: { content: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      className="flex items-end gap-2"
+    >
+      <FreyalAvatar />
+      <div
+        className="px-4 py-3 text-[13px] leading-[1.65] text-cc-off/80 font-light max-w-[80%]"
+        style={{
+          background: "rgba(255,255,255,0.08)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          borderRadius: "18px 18px 18px 4px",
+          backdropFilter: "blur(12px)",
+        }}
+      >
+        {content}
+      </div>
+    </motion.div>
+  );
+}
+
+function UserBubble({ content }: { content: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      className="flex items-end justify-end gap-2"
+    >
+      <div
+        className="px-4 py-3 text-[13px] leading-[1.65] font-light max-w-[80%]"
+        style={{
+          background: "rgba(var(--phase-accent-rgb,4,201,244),0.13)",
+          border: "1px solid rgba(var(--phase-accent-rgb,4,201,244),0.22)",
+          borderRadius: "18px 18px 4px 18px",
+          color: "rgba(242,242,242,0.85)",
+        }}
+      >
+        {content}
+      </div>
+      <AnonAvatar />
+    </motion.div>
+  );
+}
+
+function TypingIndicator() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      className="flex items-end gap-2"
+    >
+      <FreyalAvatar />
+      <div
+        className="flex items-center gap-1.5 px-4 py-3"
+        style={{
+          background: "rgba(255,255,255,0.07)",
+          border: "1px solid rgba(255,255,255,0.09)",
+          borderRadius: "18px 18px 18px 4px",
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <motion.div
+            key={i}
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: "rgba(242,242,242,0.4)" }}
+            animate={{ opacity: [0.3, 1, 0.3] }}
+            transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.18 }}
+          />
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Input components ──────────────────────────────────────────────────────────
+
+function ChipInput({ options, multi, onAnswer, onSkip, skipLabel }: {
+  options: string[]; multi?: boolean; onAnswer: (v: string) => void;
+  onSkip?: () => void; skipLabel?: string;
+}) {
+  const [selected, setSelected] = useState<string[]>([]);
+
+  function toggle(o: string) {
+    if (multi) {
+      setSelected((s) => s.includes(o) ? s.filter((x) => x !== o) : [...s, o]);
+    } else {
+      onAnswer(o);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2 overflow-y-auto max-h-[220px]" style={{ scrollbarWidth: "none" }}>
+        {options.map((o) => {
+          const active = selected.includes(o);
+          return (
+            <button
+              key={o}
+              onClick={() => toggle(o)}
+              className="px-3.5 py-2.5 text-[11px] font-medium uppercase tracking-[0.12em] transition-all active:scale-95"
+              style={{
+                borderRadius: "9999px",
+                border: active ? "1px solid rgba(var(--phase-accent-rgb,4,201,244),0.55)" : "1px solid rgba(255,255,255,0.14)",
+                background: active ? "rgba(var(--phase-accent-rgb,4,201,244),0.12)" : "rgba(255,255,255,0.05)",
+                color: active ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.5)",
+              }}
+            >
+              {o}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex items-center justify-between">
+        {multi && selected.length > 0 ? (
+          <button
+            onClick={() => onAnswer(selected.join(", "))}
+            className="px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] rounded-full transition-all active:scale-95"
+            style={{
+              background: "linear-gradient(135deg, var(--phase-accent,#04C9F4), rgba(var(--phase-accent-rgb,4,201,244),0.7))",
+              color: "#050606",
+            }}
+          >
+            Done
+          </button>
+        ) : <div />}
+        {onSkip && (
+          <button
+            onClick={onSkip}
+            className="text-[10.5px] uppercase tracking-[0.16em] text-cc-off/20 hover:text-cc-off/45 transition-colors"
+          >
+            {skipLabel ?? "Skip"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TextInput({ onAnswer, onSkip, skipLabel }: {
+  onAnswer: (v: string) => void; onSkip?: () => void; skipLabel?: string;
+}) {
+  const [val, setVal] = useState("");
+  const [err, setErr] = useState("");
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  function submit() {
+    if (!val.trim()) return;
+    if (!emailRe.test(val.trim())) { setErr("That doesn't look like a valid email."); return; }
+    onAnswer(val.trim());
+  }
+
+  return (
+    <div className="space-y-2">
+      <div
+        className="flex gap-2 items-center p-1.5"
+        style={{
+          background: "rgba(255,255,255,0.07)",
+          border: err ? "1px solid rgba(220,60,60,0.4)" : "1px solid rgba(255,255,255,0.12)",
+          borderRadius: "14px",
+        }}
+      >
+        <input
+          type="email"
+          value={val}
+          onChange={(e) => { setVal(e.target.value); setErr(""); }}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+          placeholder="your@email.com"
+          autoFocus
+          className="flex-1 bg-transparent text-cc-off/80 placeholder:text-cc-off/20 px-3 py-2 text-[13.5px] focus:outline-none"
+        />
+        {val.trim() && (
+          <button
+            onClick={submit}
+            className="px-4 py-2 rounded-[10px] text-[11px] font-semibold uppercase tracking-[0.12em]"
+            style={{
+              background: "linear-gradient(135deg, var(--phase-accent,#04C9F4), rgba(var(--phase-accent-rgb,4,201,244),0.7))",
+              color: "#050606",
+            }}
+          >
+            Send
+          </button>
+        )}
+      </div>
+      {err && <p className="text-[11px] px-1" style={{ color: "rgba(220,60,60,0.8)" }}>{err}</p>}
+      {onSkip && !err && (
+        <div className="flex justify-end">
+          <button onClick={onSkip} className="text-[10.5px] uppercase tracking-[0.16em] text-cc-off/20 hover:text-cc-off/45 transition-colors">
+            {skipLabel ?? "Skip"}
+          </button>
+        </div>
+      )}
+      {onSkip && err && (
+        <div className="flex justify-end">
+          <button onClick={onSkip} className="text-[10.5px] uppercase tracking-[0.16em] text-cc-off/20 hover:text-cc-off/45 transition-colors">
+            {skipLabel ?? "Skip anyway"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AgeInput({ onAnswer }: { onAnswer: (v: string) => void }) {
+  const [val, setVal] = useState("");
+  const [err, setErr] = useState("");
+
+  function submit() {
+    const n = parseInt(val, 10);
+    if (isNaN(n) || val.trim() === "") { setErr("Please enter your age."); return; }
+    if (n < 16) { setErr("You must be at least 16 to submit a confession."); return; }
+    if (n > 99) { setErr("Please enter a valid age."); return; }
+    onAnswer(String(n));
+  }
+
+  return (
+    <div className="space-y-2">
+      <div
+        className="flex gap-2 items-center p-1.5"
+        style={{
+          background: "rgba(255,255,255,0.07)",
+          border: err ? "1px solid rgba(220,60,60,0.4)" : "1px solid rgba(255,255,255,0.12)",
+          borderRadius: "14px",
+        }}
+      >
+        <input
+          type="number"
+          inputMode="numeric"
+          min={16}
+          max={99}
+          value={val}
+          onChange={(e) => { setVal(e.target.value); setErr(""); }}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+          placeholder="Your age"
+          autoFocus
+          className="flex-1 bg-transparent text-cc-off/80 placeholder:text-cc-off/20 px-3 py-2 text-[13.5px] focus:outline-none"
+        />
+        {val.trim() && (
+          <button
+            onClick={submit}
+            className="px-4 py-2 rounded-[10px] text-[11px] font-semibold uppercase tracking-[0.12em]"
+            style={{
+              background: "linear-gradient(135deg, var(--phase-accent,#04C9F4), rgba(var(--phase-accent-rgb,4,201,244),0.7))",
+              color: "#050606",
+            }}
+          >
+            OK
+          </button>
+        )}
+      </div>
+      {err && <p className="text-[11px] px-1" style={{ color: "rgba(220,60,60,0.8)" }}>{err}</p>}
+    </div>
+  );
+}
+
+function InfoInput({ onNext }: { onNext: () => void }) {
+  return (
+    <button
+      onClick={onNext}
+      className="w-full py-3 text-[11px] font-semibold uppercase tracking-[0.14em] rounded-2xl transition-all active:scale-[0.98]"
+      style={{
+        background: "rgba(255,255,255,0.10)",
+        border: "1px solid rgba(255,255,255,0.16)",
+        color: "rgba(242,242,242,0.7)",
+      }}
+    >
+      Got it
+    </button>
+  );
+}
+
+function RefRevealInput({ refId, onNext }: { refId: string; onNext: () => void }) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard.writeText(refId).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  }
+  return (
+    <div className="space-y-3">
+      <div
+        className="flex items-center justify-between px-4 py-3.5"
+        style={{
+          background: "rgba(var(--phase-accent-rgb,4,201,244),0.08)",
+          border: "1px solid rgba(var(--phase-accent-rgb,4,201,244),0.2)",
+          borderRadius: "14px",
+        }}
+      >
+        <div className="font-display text-2xl tracking-[0.22em]" style={{ color: "var(--phase-accent,#04C9F4)" }}>{refId}</div>
+        <button
+          onClick={copy}
+          className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.14em] px-3 py-1.5 rounded-lg transition-colors"
+          style={{ color: copied ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.3)", border: "1px solid rgba(255,255,255,0.08)" }}
+        >
+          <Copy size={11} /> {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <button
+        onClick={onNext}
+        className="w-full flex items-center justify-center px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all active:scale-[0.98]"
+        style={{
+          background: "rgba(255,255,255,0.07)",
+          border: "1px solid rgba(255,255,255,0.14)",
+          borderRadius: "13px",
+          color: "rgba(242,242,242,0.6)",
+        }}
+      >
+        I saved it — continue
+      </button>
+    </div>
+  );
+}
+
+function SubmitInput({ onDone, submitting }: { onDone: () => void; submitting: boolean }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-[10.5px] uppercase tracking-[0.16em] text-cc-off/25 text-center pb-1">
+        {submitting ? "Sending your confession…" : "Your confession has not been sent yet"}
+      </p>
+      <button
+        onClick={onDone}
+        disabled={submitting}
+        className="w-full flex items-center justify-between px-5 py-4 font-display uppercase tracking-[0.18em] text-[12px] transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+        style={{
+          background: "linear-gradient(135deg, var(--phase-accent,#04C9F4), rgba(var(--phase-accent-rgb,4,201,244),0.75))",
+          borderRadius: "13px",
+          color: "#050606",
+          boxShadow: submitting ? "none" : "0 8px 24px -6px var(--phase-glow,rgba(4,201,244,0.35))",
+        }}
+      >
+        {submitting ? "Sending…" : "Send my confession"}
+        {!submitting && <ArrowRight size={15} strokeWidth={2.4} />}
+      </button>
+    </div>
+  );
+}
+
+// ─── Chat view ─────────────────────────────────────────────────────────────────
+
+interface Message { id: string; role: "bot" | "user"; content: string; }
+
+function ChatView({ body, flow, refId, submitting, onDone }: { body: string; flow: FlowStep[]; refId: string; submitting: boolean; onDone: (answers: Record<string, string>) => void | Promise<void> }) {
+  const [messages, setMessages]     = useState<Message[]>([]);
+  const [typing, setTyping]         = useState(false);
+  const [stepIdx, setStepIdx]       = useState(0);
+  const [inputReady, setInputReady] = useState(false);
+  const bottomRef                   = useRef<HTMLDivElement>(null);
+  const answersRef                  = useRef<Record<string, string>>({});
+
+  useEffect(() => {
+    const snippet = body.length > 100 ? body.slice(0, 100) + "…" : body;
+    setMessages([{ id: "confession", role: "user", content: snippet }]);
+    const t = setTimeout(() => askStep(0), 500);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, typing, inputReady]);
+
+  function askStep(idx: number) {
+    if (idx >= flow.length) { onDone(answersRef.current); return; }
+    setInputReady(false);
+    setTyping(true);
+    setTimeout(() => {
+      setMessages((m) => m.some((x) => x.id === `bot-${idx}`) ? m : [...m, { id: `bot-${idx}`, role: "bot", content: flow[idx].message }]);
+      setTyping(false);
+      setTimeout(() => setInputReady(true), 120);
+      setStepIdx(idx);
+    }, 650);
+  }
+
+  function answer(value: string) {
+    const stepId = flow[stepIdx]?.id;
+    if (stepId && value) answersRef.current[stepId] = value;
+    if (value) setMessages((m) => [...m, { id: `user-${stepIdx}`, role: "user", content: value }]);
+    setInputReady(false);
+    setTimeout(() => askStep(stepIdx + 1), value ? 350 : 100);
+  }
+
+  const currentStep = flow[stepIdx];
+  const showInput = inputReady && !typing && messages.some((m) => m.id === `bot-${stepIdx}`);
+
+  return (
+    <>
+      {/* Scrollable messages — fills all remaining space */}
+      <div className="flex flex-col gap-3 overflow-y-auto flex-1" style={{ paddingBottom: "4px" }}>
+        {messages.map((m) =>
+          m.role === "bot"
+            ? <BotBubble key={m.id} content={m.content} />
+            : <UserBubble key={m.id} content={m.content} />
+        )}
+        <AnimatePresence>{typing && <TypingIndicator key="typing" />}</AnimatePresence>
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input — fixed height at bottom, never causes container to grow */}
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "14px", flexShrink: 0, minHeight: "120px" }}>
+        <AnimatePresence mode="wait">
+          {showInput && (
+            <motion.div
+              key={`input-${stepIdx}`}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {currentStep.type === "chips" && (
+                <ChipInput
+                  options={currentStep.options!}
+                  onAnswer={answer}
+                  onSkip={currentStep.skip ? () => answer("") : undefined}
+                  skipLabel={currentStep.skipLabel}
+                />
+              )}
+              {currentStep.type === "multichips" && (
+                <ChipInput
+                  options={currentStep.options!}
+                  multi
+                  onAnswer={answer}
+                  onSkip={currentStep.skip ? () => answer("") : undefined}
+                  skipLabel={currentStep.skipLabel}
+                />
+              )}
+              {currentStep.type === "text" && (
+                <TextInput
+                  onAnswer={answer}
+                  onSkip={currentStep.skip ? () => answer("") : undefined}
+                  skipLabel={currentStep.skipLabel}
+                />
+              )}
+              {currentStep.type === "age" && (
+                <AgeInput onAnswer={answer} />
+              )}
+              {currentStep.type === "info" && (
+                <InfoInput onNext={() => answer("")} />
+              )}
+              {currentStep.type === "refreveal" && (
+                <RefRevealInput refId={refId} onNext={() => answer("Saved")} />
+              )}
+              {currentStep.type === "submit" && (
+                <SubmitInput onDone={() => onDone(answersRef.current)} submitting={submitting} />
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </>
+  );
+}
+
+// ─── Done state ────────────────────────────────────────────────────────────────
+
+function DoneView({ refId, onAnother }: { refId: string; onAnother: () => void }) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard.writeText(refId).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  }
+  return (
+    <div className="flex flex-col items-center text-center gap-8 py-10">
+      <div
+        className="w-20 h-20 grid place-items-center rounded-full"
+        style={{ background: "rgba(var(--phase-accent-rgb,4,201,244),0.08)", border: "1px solid rgba(var(--phase-accent-rgb,4,201,244),0.2)" }}
+      >
+        <Check size={32} strokeWidth={2} style={{ color: "var(--phase-accent,#04C9F4)" }} />
+      </div>
+      <div className="space-y-3">
+        <div className="text-[10px] uppercase tracking-[0.3em] text-cc-off/30">— It's with us now</div>
+        <h2 className="font-display text-4xl uppercase text-cc-off leading-tight">
+          You said it.<br />That took courage.
+        </h2>
+        <p className="text-cc-off/40 text-sm leading-relaxed max-w-xs mx-auto">
+          Your confession is in review. We read every one.
+        </p>
+      </div>
+
+      {/* Ref number */}
+      <div
+        className="w-full flex items-center justify-between px-4 py-3.5"
+        style={{
+          background: "rgba(var(--phase-accent-rgb,4,201,244),0.07)",
+          border: "1px solid rgba(var(--phase-accent-rgb,4,201,244),0.18)",
+          borderRadius: "14px",
+        }}
+      >
+        <div className="text-left">
+          <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/30 mb-1">Your reference</div>
+          <div className="font-display text-xl tracking-[0.22em]" style={{ color: "var(--phase-accent,#04C9F4)" }}>{refId}</div>
+        </div>
+        <button
+          onClick={copy}
+          className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.14em] px-3.5 py-2 rounded-lg transition-all active:scale-95"
+          style={{
+            color: copied ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.75)",
+            background: copied ? "rgba(var(--phase-accent-rgb,4,201,244),0.1)" : "rgba(255,255,255,0.1)",
+            border: `1px solid ${copied ? "rgba(var(--phase-accent-rgb,4,201,244),0.35)" : "rgba(255,255,255,0.2)"}`,
+          }}
+        >
+          <Copy size={11} /> {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+
+      {/* Confess again */}
+      <button
+        onClick={onAnother}
+        className="w-full flex items-center justify-center px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all active:scale-[0.98]"
+        style={{
+          background: "rgba(255,255,255,0.07)",
+          border: "1px solid rgba(255,255,255,0.14)",
+          borderRadius: "13px",
+          color: "rgba(242,242,242,0.55)",
+        }}
+      >
+        Confess something else
+      </button>
+    </div>
+  );
+}
+
+// ─── Main page ─────────────────────────────────────────────────────────────────
+
+function ConfessPage() {
+  const [stage, setStage]         = useState<"write" | "chat" | "done">("write");
+  const [body, setBody]           = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const refId = useRef(
+    Array.from({ length: 8 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("")
+  );
+
+  useEffect(() => { getOrCreateAnonId(); }, []);
+
+  async function handleDone(answers: Record<string, string>) {
+    if (body.length > 2500) return;
+    setSubmitting(true);
+    setSubmitError(null);
+
+    const ref    = refId.current;
+    const anonId = getOrCreateAnonId();
+
+    // Optimistic save — Mine tab shows immediately
+    saveRefToProfile(ref);
+    markIngesting(ref);
+    if (body) saveSnippet(ref, body);
+    saveOriginBrowser(detectBrowser());
+    const { browser, device } = getBrowserDetails();
+
+    const payload: SubmitPayload = {
+      refNum:   ref,
+      anonId,
+      mood:     answers["mood"]     ?? "",
+      gender:   answers["gender"]   ?? "",
+      age:      parseInt(answers["age"] ?? "0", 10),
+      location: answers["location"] ?? "",
+      email:    answers["email"]    ?? "",
+      body,
+      category: answers["category"] ?? "",
+      tags:     answers["tags"] ? answers["tags"].split(", ") : [],
+      browser,
+      device,
+    };
+
+    try {
+      const submitFn = submitConfession as unknown as (opts: { data: SubmitPayload }) => Promise<import("../lib/confessSubmit").SubmitResult>;
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), 32000)
+      );
+      const result = await Promise.race([submitFn({ data: payload }), timeout]);
+
+      if (result.success) {
+        clearIngesting(ref);
+        setStage("done");
+      } else if (result.step === "sheet") {
+        // Confession not saved — rollback everything
+        clearIngesting(ref);
+        removeRefFromProfile(ref);
+        setSubmitError("Something went wrong sending your confession. Please try again.");
+      } else {
+        // Sheet succeeded, pipeline failed — mark failed, still go to done
+        clearIngesting(ref);
+        markIngestionFailed(ref);
+        setStage("done");
+      }
+    } catch (err) {
+      if ((err as Error)?.message === "timeout") {
+        // GAS is slow but likely received the request — leave ref as ingesting,
+        // track page will poll immediately and resolve it within ~10s
+        setStage("done");
+      } else {
+        clearIngesting(ref);
+        removeRefFromProfile(ref);
+        setSubmitError("Connection error. Please check your network and try again.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="py-2">
+      <AnimatePresence mode="wait">
+
+        {stage === "write" && (
+          <motion.div
+            key="write"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 0.97, y: -10 }}
+            transition={{ duration: 0.28, ease: [0.4, 0, 1, 1] }}
+            className="flex flex-col gap-5 pb-10"
+          >
+            <div className="space-y-1">
+              <div className="text-[10px] uppercase tracking-[0.28em] text-cc-off/30">— You're safe here</div>
+              <h1 className="font-display text-[2rem] uppercase text-cc-off leading-tight">
+                Say what<br />you carry.
+              </h1>
+            </div>
+
+            <div
+              style={{
+                background: "rgba(255,255,255,0.10)",
+                border: "1px solid rgba(255,255,255,0.16)",
+                borderRadius: "18px",
+                backdropFilter: "blur(14px)",
+                overflow: "hidden",
+              }}
+            >
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                onKeyDown={(e) => {
+                  if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && body.trim().length >= 10 && body.length <= 2500) {
+                    e.preventDefault();
+                    setStage("chat");
+                  }
+                }}
+                placeholder="What's been sitting with you? Take your time..."
+                rows={8}
+                className="w-full bg-transparent text-cc-off placeholder:text-cc-off/20 text-[15px] leading-[1.8] resize-none focus:outline-none font-light p-5"
+              />
+              <div
+                className="flex items-center justify-between px-5 pb-4"
+                style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
+              >
+                <span className="flex items-center gap-1.5 text-[10px] text-cc-off/20 uppercase tracking-[0.18em]">
+                  <Lock size={9} strokeWidth={1.8} />
+                  Anonymous
+                </span>
+                <span className="text-[11px]" style={{
+                  color: body.length > 2500
+                    ? "#ef4444"
+                    : body.length > 0
+                      ? "rgba(var(--phase-accent-rgb,4,201,244),0.5)"
+                      : "rgba(242,242,242,0.2)",
+                  transition: "color 0.2s ease",
+                }}>
+                  {body.length} / 2500
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setStage("chat")}
+              disabled={body.trim().length < 10 || body.length > 2500}
+              className="w-full flex items-center justify-between px-6 py-4 font-display uppercase tracking-[0.18em] text-[13px] transition-all active:scale-[0.98] disabled:opacity-25 disabled:cursor-not-allowed"
+              style={{
+                background: body.trim().length >= 10 && body.length <= 2500
+                  ? "linear-gradient(135deg, var(--phase-accent,#04C9F4), rgba(var(--phase-accent-rgb,4,201,244),0.75))"
+                  : "rgba(255,255,255,0.06)",
+                borderRadius: "14px",
+                color: body.trim().length >= 10 && body.length <= 2500 ? "#050606" : "rgba(242,242,242,0.4)",
+                boxShadow: body.trim().length >= 10 && body.length <= 2500 ? "0 8px 24px -6px var(--phase-glow,rgba(4,201,244,0.35))" : "none",
+                transition: "background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease",
+              }}
+            >
+              Continue
+              <ArrowRight size={16} strokeWidth={2.4} />
+            </button>
+          </motion.div>
+        )}
+
+        {stage === "chat" && (
+          <motion.div
+            key="chat"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="flex flex-col gap-4"
+          >
+            <div className="space-y-1">
+              <div className="text-[10px] uppercase tracking-[0.28em] text-cc-off/30">— A few quick questions</div>
+              <h1 className="font-display text-[1.6rem] uppercase text-cc-off leading-tight">Help us understand.</h1>
+            </div>
+
+            <div
+              className="flex flex-col"
+              style={{
+                background: "rgba(255,255,255,0.07)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: "22px",
+                backdropFilter: "blur(20px)",
+                padding: "20px",
+                height: "62dvh",
+              }}
+            >
+              <ChatView body={body} flow={FLOW} refId={refId.current} submitting={submitting} onDone={handleDone} />
+            </div>
+            {submitError && (
+              <div className="mt-3 px-4 py-3 text-[12.5px] text-red-400 leading-relaxed" style={{ background: "rgba(239,68,68,0.08)", borderRadius: "12px", border: "1px solid rgba(239,68,68,0.2)" }}>
+                {submitError}
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {stage === "done" && (
+          <motion.div
+            key="done"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <DoneView refId={refId.current} onAnother={() => {
+              refId.current = Array.from({ length: 8 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("");
+              setBody("");
+              setStage("write");
+            }} />
+          </motion.div>
+        )}
+
+      </AnimatePresence>
+    </div>
+  );
+}
