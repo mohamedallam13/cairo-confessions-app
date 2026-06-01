@@ -676,14 +676,11 @@ function genRef() {
 }
 
 function ConfessPage() {
-  const savedStage = typeof window !== "undefined" ? localStorage.getItem(LS_CONFESS_STAGE) : null;
-  const savedRef   = typeof window !== "undefined" ? localStorage.getItem(LS_CONFESS_REF)   : null;
-
-  const [stage, setStageRaw]      = useState<"write" | "chat" | "done">(savedStage === "done" ? "done" : "write");
+  const [stage, setStageRaw]      = useState<"write" | "chat" | "done">("write");
   const [body, setBody]           = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const refId = useRef(savedStage === "done" && savedRef ? savedRef : genRef());
+  const refId = useRef(genRef());
 
   function setStage(s: "write" | "chat" | "done") {
     setStageRaw(s);
@@ -695,6 +692,16 @@ function ConfessPage() {
       localStorage.removeItem(LS_CONFESS_REF);
     }
   }
+
+  // Restore done state from localStorage after mount (SSR-safe)
+  useEffect(() => {
+    const savedStage = localStorage.getItem(LS_CONFESS_STAGE);
+    const savedRef   = localStorage.getItem(LS_CONFESS_REF);
+    if (savedStage === "done" && savedRef) {
+      refId.current = savedRef;
+      setStageRaw("done");
+    }
+  }, []);
 
   useEffect(() => { getOrCreateAnonId(); }, []);
 

@@ -1151,6 +1151,7 @@ function TrackPage() {
   const search = useSearch({ from: "/track" });
   const navigate = useNavigate();
 
+  const [mounted, setMounted]           = useState(false);
   const [anonId, setAnonId]             = useState("");
   const [myRefs, setMyRefs]             = useState<string[]>([]);
   const [ingestingRefs, setIngestingRefs] = useState<string[]>([]);
@@ -1235,6 +1236,7 @@ function TrackPage() {
   }, []);
 
   useEffect(() => {
+    setMounted(true);
     setAnonId(getOrCreateAnonId());
     setMyRefs(getMyRefs());
     setIngestingRefs(getIngestingRefs());
@@ -1522,6 +1524,9 @@ function TrackPage() {
       </>
     );
   }
+
+  // ── Not yet mounted — don't flash empty state before localStorage is read ──
+  if (!mounted) return null;
 
   // ── Collection view ──
   if (myRefs.length > 0) {
