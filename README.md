@@ -1,5 +1,7 @@
 # Cairo Confessions — App V1
 
+![Cairo at night — the city that never stops confessing](public/og-image.jpg)
+
 **A safe, anonymous space to confess, track, and connect.**
 
 → **Live:** [app.cairoconfessions.com](https://app.cairoconfessions.com) · workers: [cc-app.mohamedallam-tu.workers.dev](https://cc-app.mohamedallam-tu.workers.dev)  
