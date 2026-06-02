@@ -235,14 +235,16 @@ export default function Layout() {
   const [hasIngesting, setHasIngesting] = useState(false);
 
   // ── Splash screen — PWA only ──
-  const isPWA = typeof window !== "undefined" && (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (navigator as any).standalone === true
-  );
-  const [showSplash, setShowSplash] = useState(isPWA);
+  // Splash is rendered in SSR HTML (RootShell) so it shows on first paint.
+  // Here we just fade it out after the animation completes.
   useEffect(() => {
-    if (!isPWA) return;
-    const t = setTimeout(() => setShowSplash(false), 1400);
+    const el = document.getElementById("pwa-splash");
+    if (!el || el.style.display === "none") return;
+    const t = setTimeout(() => {
+      el.style.opacity = "0";
+      el.style.pointerEvents = "none";
+      setTimeout(() => el.remove(), 650);
+    }, 1600);
     return () => clearTimeout(t);
   }, []);
 
@@ -345,35 +347,6 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ position: "relative" }}>
-
-      <AnimatePresence>
-        {showSplash && (
-          <motion.div
-            key="splash"
-            className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-6"
-            style={{ background: "#050606" }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6, ease: "easeInOut" }}
-          >
-            <motion.img
-              src={logoIcon}
-              alt="Cairo Confessions"
-              className="w-20 h-auto"
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            />
-            <motion.p
-              className="font-display text-[11px] uppercase tracking-[0.35em] text-cc-off/30"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            >
-              Cairo Confessions
-            </motion.p>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {showIdentityReveal && !sessionConflict && (
         <IdentityRevealModal

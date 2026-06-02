@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate, useSearch, Link } from "@tanstack/react-router";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, Heart, MessageCircle, Clock, ExternalLink, X, Reply, Check, ChevronRight, ChevronLeft, Copy, ArrowRightLeft, Download } from "lucide-react";
+import { Search, Heart, MessageCircle, Clock, ExternalLink, X, Reply, Check, ChevronRight, ChevronLeft, Copy, ArrowRightLeft, Download, Bell, BellOff } from "lucide-react";
 import { fieldWithPadding } from "../lib/fieldStyles";
 import { getOrCreateAnonId, getMyRefs, saveRefToProfile, isIngesting as checkIngesting, getIngestingRefs, getIngestionFailedRefs, getSnippet, saveSnippet, saveCardCache, getCardCache, getStatusCache, saveStatusCache, getAllStatusCache, getLastPolled, resetIdentity, clearIngestionFailed, clearIngesting, adoptSession, detectBrowser, getOriginBrowser, getBrowserDetails } from "../lib/anonIdentity";
 import { pollTrackingStatuses, addAnonId, type ResolvedEntry } from "../lib/fetchTracking";
 import { cancelConfession } from "../lib/cancelConfession";
 import { createRecoveryToken, redeemRecoveryToken } from "../lib/recoveryToken";
+import { subscribePush, unsubscribePush } from "../lib/pushNotifications";
 
 export const Route = createFileRoute("/track")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -1151,6 +1152,119 @@ function ImportModal({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+// ─── Notifications toggle ─────────────────────────────────────────────────────
+
+const PUSH_VAPID_PUBLIC_KEY =
+  "BKAhcwHJv1WCOk0ve_MM07KF2Nx0nd_DKu7qARwt-u7iuA0f6jOOPe-sPU8th5yuEqcgk2DggXHaLXIUZ9IZPNk";
+
+function urlBase64ToUint8Array(b64: string): Uint8Array {
+  const pad = "=".repeat((4 - (b64.length % 4)) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+}
+
+function NotificationsToggle({ anonId }: { anonId: string }) {
+  const [enabled, setEnabled] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [supported, setSupported] = useState(true);
+  const [errMsg, setErrMsg] = useState("");
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setSupported(false);
+      return;
+    }
+    setEnabled(localStorage.getItem("cc_push_enabled") === "1");
+  }, []);
+
+  async function toggle() {
+    if (loading || !anonId) return;
+    setLoading(true);
+    setErrMsg("");
+    try {
+      if (!enabled) {
+        // Register SW and wait for it to be active before requesting permission
+        await navigator.serviceWorker.register("/sw.js");
+        const registration = await navigator.serviceWorker.ready;
+        const perm = await Notification.requestPermission();
+        if (perm !== "granted") { setLoading(false); return; }
+        // Pass Uint8Array directly — iOS Safari rejects ArrayBuffer in some versions
+        const key = urlBase64ToUint8Array(PUSH_VAPID_PUBLIC_KEY);
+        const sub = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          applicationServerKey: key as any,
+        });
+        const j = sub.toJSON();
+        await (subscribePush as any)({
+          data: {
+            anonId,
+            subscription: { endpoint: j.endpoint!, keys: { p256dh: j.keys!["p256dh"], auth: j.keys!["auth"] } },
+          },
+        });
+        localStorage.setItem("cc_push_enabled", "1");
+        setEnabled(true);
+      } else {
+        const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+        if (reg) { const sub = await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); }
+        await (unsubscribePush as any)({ data: { anonId } });
+        localStorage.removeItem("cc_push_enabled");
+        setEnabled(false);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrMsg(msg);
+      console.error("Push toggle error:", err);
+    }
+    setLoading(false);
+  }
+
+  if (!supported) return null;
+
+  return (
+    <div className="space-y-1.5">
+    <button
+      onClick={toggle}
+      disabled={loading}
+      className="w-full flex items-center justify-between gap-2 py-3 px-4 rounded-xl transition-all active:scale-[0.98]"
+      style={{
+        background: enabled ? "rgba(var(--phase-accent-rgb,4,201,244),0.08)" : "rgba(255,255,255,0.04)",
+        border: enabled ? "1px solid rgba(var(--phase-accent-rgb,4,201,244),0.22)" : "1px solid rgba(255,255,255,0.09)",
+        color: enabled ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.40)",
+        opacity: loading ? 0.6 : 1,
+      }}
+    >
+      <div className="flex items-center gap-2.5">
+        {enabled
+          ? <Bell size={13} strokeWidth={1.8} />
+          : <BellOff size={13} strokeWidth={1.8} />}
+        <span className="text-[10.5px] uppercase tracking-[0.16em]">
+          {loading ? "…" : enabled ? "Hourly reminders on" : "Enable hourly reminders"}
+        </span>
+      </div>
+      <div
+        className="w-8 h-4 rounded-full flex items-center transition-all shrink-0"
+        style={{
+          background: enabled ? "rgba(var(--phase-accent-rgb,4,201,244),0.35)" : "rgba(255,255,255,0.10)",
+          justifyContent: enabled ? "flex-end" : "flex-start",
+          padding: "2px",
+        }}
+      >
+        <div
+          className="w-3 h-3 rounded-full"
+          style={{ background: enabled ? "var(--phase-accent,#04C9F4)" : "rgba(255,255,255,0.35)" }}
+        />
+      </div>
+    </button>
+    {errMsg && (
+      <p className="text-[10px] text-red-400/80 px-1 leading-snug">{errMsg}</p>
+    )}
+    </div>
+  );
+}
+
+// ─── TrackPage ─────────────────────────────────────────────────────────────────
+
 function TrackPage() {
   const search = useSearch({ from: "/track" });
   const navigate = useNavigate();
@@ -1587,6 +1701,7 @@ function TrackPage() {
         >
           <p className="text-[9px] uppercase tracking-[0.2em] text-cc-off/60 text-center font-semibold">My Space Settings</p>
           <div className="space-y-2">
+            <NotificationsToggle anonId={anonId} />
             <button
               onClick={() => setShowImportModal(true)}
               className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-display text-[11px] uppercase tracking-[0.18em] transition-all active:scale-[0.98]"
@@ -1671,6 +1786,7 @@ function TrackPage() {
       >
         <p className="text-[9px] uppercase tracking-[0.2em] text-cc-off/20 text-center">My Space Settings</p>
         <div className="space-y-2">
+          <NotificationsToggle anonId={anonId} />
           <button
             onClick={() => setShowImportModal(true)}
             className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-display text-[11px] uppercase tracking-[0.18em] transition-all active:scale-[0.98]"

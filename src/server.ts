@@ -1,4 +1,5 @@
 import "./lib/error-capture";
+import { sendPushToAll } from "./lib/pushNotifications";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
@@ -67,7 +68,13 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 }
 
 export default {
+  async scheduled(_event: unknown, env: unknown, _ctx: unknown) {
+    await sendPushToAll(env as Parameters<typeof sendPushToAll>[0]);
+  },
+
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    // Expose CF bindings to createServerFn handlers via globalThis.__env__
+    (globalThis as Record<string, unknown>)["__env__"] = env;
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

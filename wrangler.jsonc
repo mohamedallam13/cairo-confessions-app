@@ -7,5 +7,15 @@
   "assets": {
     "directory": "dist/client"
   },
-  "no_bundle": false
+  "no_bundle": false,
+  "kv_namespaces": [
+    {
+      "binding": "PUSH_SUBS",
+      "id": "98150683b3f64436addbeaa048f1ddaa",
+      "preview_id": "e773463a6457427786434ca9ef1907d2"
+    }
+  ],
+  "triggers": {
+    "crons": ["*/10 * * * *"]
+  }
 }
