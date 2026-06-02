@@ -234,6 +234,13 @@ export default function Layout() {
   const { phase, tokens } = useTimePhase(searchStr);
   const [hasIngesting, setHasIngesting] = useState(false);
 
+  // ── Splash screen ──
+  const [showSplash, setShowSplash] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setShowSplash(false), 1400);
+    return () => clearTimeout(t);
+  }, []);
+
   // ── Identity reveal — show on /track until user explicitly dismisses ──
   const [showIdentityReveal, setShowIdentityReveal] = useState(false);
   useEffect(() => {
@@ -333,6 +340,35 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ position: "relative" }}>
+
+      <AnimatePresence>
+        {showSplash && (
+          <motion.div
+            key="splash"
+            className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-6"
+            style={{ background: "#050606" }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
+          >
+            <motion.img
+              src={logoIcon}
+              alt="Cairo Confessions"
+              className="w-20 h-auto"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            />
+            <motion.p
+              className="font-display text-[11px] uppercase tracking-[0.35em] text-cc-off/30"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            >
+              Cairo Confessions
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {showIdentityReveal && !sessionConflict && (
         <IdentityRevealModal
