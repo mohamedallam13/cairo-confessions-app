@@ -365,6 +365,7 @@ export default function Layout() {
             background: "rgba(6,8,9,0.60)",
             backdropFilter: "blur(20px)",
             borderBottom: "1px solid rgba(255,255,255,0.08)",
+            paddingTop: "env(safe-area-inset-top)",
           }}
         >
           <div className="max-w-lg mx-auto px-5 h-16 flex items-center justify-between">
@@ -416,7 +417,7 @@ export default function Layout() {
       </main>
 
       {/* Bottom nav — hidden on landing page */}
-      {!isHome && <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[min(440px,calc(100%-32px))]">
+      {!isHome && <nav className="fixed left-1/2 -translate-x-1/2 z-50 w-[min(440px,calc(100%-32px))]" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}>
 
         <div
           className="relative grid py-2"
