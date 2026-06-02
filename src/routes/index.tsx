@@ -105,7 +105,7 @@ function Home() {
             <Library size={17} strokeWidth={1.8} className="text-cc-off/50" />
           </div>
           <div className="flex-1 text-left">
-            <div className="text-cc-off/80 text-[15px] font-semibold leading-tight">Mine</div>
+            <div className="text-cc-off/80 text-[15px] font-semibold leading-tight">My Space</div>
             <div className="text-cc-off/30 text-[12px] mt-0.5">See your confession status and messages</div>
           </div>
           <div className="text-cc-off/15 group-hover:text-cc-off/40 transition-colors text-lg">›</div>
