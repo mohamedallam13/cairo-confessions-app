@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, Outlet, useLocation, useRouter } from "@tanstack/react-router";
 import { Library, Mail, ChevronLeft } from "lucide-react";
-import { getIngestingRefs, getOrCreateAnonId, isNewIdentity, detectBrowser, getMyRefs } from "../lib/anonIdentity";
+import { getIngestingRefs, getOrCreateAnonId, detectBrowser, getMyRefs } from "../lib/anonIdentity";
 import { PHASES, type Phase, getPhaseOverride, setPhaseOverride } from "../hooks/useTimePhase";
 
 // ─── Identity reveal modal ───────────────────────────────────────────────────
@@ -234,12 +234,11 @@ export default function Layout() {
   const { phase, tokens } = useTimePhase(searchStr);
   const [hasIngesting, setHasIngesting] = useState(false);
 
-  // ── Identity reveal — only on /track, only when a new ID was just created ──
+  // ── Identity reveal — show on /track until user explicitly dismisses ──
   const [showIdentityReveal, setShowIdentityReveal] = useState(false);
   useEffect(() => {
     if (pathname !== "/track") return;
-    if (isNewIdentity()) {
-      // ID doesn't exist yet — it'll be created when we call getOrCreateAnonId below
+    if (!localStorage.getItem("cc_identity_introduced")) {
       setShowIdentityReveal(true);
     }
   }, [pathname]);
@@ -254,6 +253,7 @@ export default function Layout() {
   }, [pathname]);
 
   function handleIdentityDone() {
+    localStorage.setItem("cc_identity_introduced", "1");
     setShowIdentityReveal(false);
   }
 
