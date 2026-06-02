@@ -234,9 +234,14 @@ export default function Layout() {
   const { phase, tokens } = useTimePhase(searchStr);
   const [hasIngesting, setHasIngesting] = useState(false);
 
-  // ── Splash screen ──
-  const [showSplash, setShowSplash] = useState(true);
+  // ── Splash screen — PWA only ──
+  const isPWA = typeof window !== "undefined" && (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (navigator as any).standalone === true
+  );
+  const [showSplash, setShowSplash] = useState(isPWA);
   useEffect(() => {
+    if (!isPWA) return;
     const t = setTimeout(() => setShowSplash(false), 1400);
     return () => clearTimeout(t);
   }, []);
