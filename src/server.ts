@@ -71,7 +71,23 @@ export default {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const normalized = await normalizeCatastrophicSsrResponse(response);
+
+      // Prevent iOS PWA from caching the HTML shell — always fetch fresh on open.
+      // Static assets (JS/CSS) are content-hashed and served by Cloudflare's asset
+      // layer so they never reach here and remain cached normally.
+      const contentType = normalized.headers.get("content-type") ?? "";
+      if (contentType.includes("text/html")) {
+        const headers = new Headers(normalized.headers);
+        headers.set("Cache-Control", "no-store");
+        return new Response(normalized.body, {
+          status: normalized.status,
+          statusText: normalized.statusText,
+          headers,
+        });
+      }
+
+      return normalized;
     } catch (error) {
       console.error(error);
       return brandedErrorResponse();
