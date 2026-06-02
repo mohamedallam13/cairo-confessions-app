@@ -673,25 +673,131 @@ After "Remove my data from this browser", the identity reveal modal never appear
 
 ---
 
+## Session 10 — 2026-06-01
+
+### What Was Shipped
+
+#### Live Deployment
+- DNS moved to Cloudflare nameservers (`henrik` + `treasure`)
+- `app.cairoconfessions.com` live on Cloudflare Worker `cc-app`
+- SSL active (Flexible mode — Squarespace origin is HTTP)
+- `www.cairoconfessions.com` (Squarespace) stays proxied via Cloudflare DNS
+- `no_bundle: false` in wrangler.jsonc — required for dynamic chunk imports (was causing 500s)
+- 2 env vars in Cloudflare dashboard: `CC_INTAKE_URL` + `CC_INTAKE_TOKEN`
+
+#### UX Renames
+- Nav "Mine" → "My Space"
+- "Recover session" → "Recover Space" everywhere
+- "This browser" panel → "My Space Settings"
+
+#### Bug Fixes
+- Conflict modal simplified — "Yes — Recover My Space →" routes to `/track?recover=1` which auto-opens the Recover Space modal
+- Origin banner Transfer button fixed — was opening generate-link modal, now opens import modal
+- Origin banner false positive fixed — normalize browser strings before comparing
+- Cancel button moved to bottom of confession detail card
+- Phase timezone fixed — always resolves to Cairo time (Africa/Cairo) regardless of visitor timezone
+
+#### Confess done state persistence attempt (still broken at end of session)
+- Added `cc_last_confess_stage` / `cc_last_confess_ref` to localStorage on `setStage("done")`
+- Added restoration `useEffect` on mount in confess-here.tsx
+- Deployed but still broken (root cause found and fixed in Session 11)
+
+---
+
+## Session 11 — 2026-06-02
+
+### Root Cause: CF Worker Kill Bug
+
+**Core bug fixed:** Cloudflare Workers kill requests at ~30s wall clock. The client's 32s Promise.race timeout fires AFTER CF kills the connection. The catch block saw a non-"timeout" error and ran the rollback path: `clearIngesting(ref)` + `removeRefFromProfile(ref)` — wiping the confession from localStorage. This caused two bugs simultaneously.
+
+#### Fix 1 — Confession disappears on mid-ingestion refresh (`confess-here.tsx`)
+User submits → navigates to track (card shows from React state) → refreshes → card gone.
+`removeRefFromProfile` was called at T+30s (CF kill) from the still-running async function, even after confess-here.tsx unmounted. On refresh, `getMyRefs()` returned `[]`.
+
+**Fix:** Catch block now always calls `setStage("done")`. Never calls `removeRefFromProfile` on network/Worker errors — GAS may have received the confession. Poll resolves it.
+
+#### Fix 2 — Confess done state lost on tab switch (`confess-here.tsx`)
+Same root cause. `setStage("done")` was only called in the `err.message === "timeout"` path, which never fires because CF kills the Worker first at T+30s. So `cc_last_confess_stage` was never written to localStorage.
+
+**Fix:** Same as Fix 1 — catch block always calls `setStage("done")`, which writes to localStorage. Restoration `useEffect` on remount works correctly now.
+
+#### Fix 3 — Recovery hydration immediate (`track.tsx`)
+After session recovery, cards showed empty for up to 30 minutes (next poll cycle).
+
+**Fix:** Added `runPoll()` at the end of `handleImported()` — fires immediately after `adoptSession`.
+
+#### Fix 4 — Confession ordering after recovery (`track.tsx`)
+Recovered confessions appeared oldest-first.
+
+**Fix 4a:** Sort recovered refNums by timestamp descending before calling `adoptSession`.
+**Fix 4b:** Sort `myRefs` at render time using `getCardCache`/`getStatusCache` timestamps — always newest-first regardless of how refs entered localStorage.
+
+#### Fix 5 — Identity reveal modal never showing (`Layout.tsx`)
+`getOrCreateAnonId()` is called in the render body (line 332) before any `useEffect` runs. So `isNewIdentity()` was always false by the time the effect checked it. Modal never showed.
+
+**Fix:** Replaced `isNewIdentity()` check with `!localStorage.getItem("cc_identity_introduced")`. Set `cc_identity_introduced = "1"` in `handleIdentityDone()`. The flag is only set on explicit dismissal — not on ID creation.
+
+#### Fix 6 — Loading state on unhydrated recovered cards (`track.tsx`)
+After recovery + immediate poll, cards with no resolved data showed empty placeholder fields. No visual indication that data was loading.
+
+**Fix:** Added `pollingRefs: Set<string>` state. Set at start of `runPoll`, cleared on completion. Cards in `pollingRefs` with no resolved data show the same ingesting indicator. `openRef()` also shows ingesting state for these refs.
+
+### PWA Work
+
+#### Favicon + App Name
+- Generated `favicon.ico` from 32x32 PNG (was missing — browsers couldn't find `/favicon.ico`)
+- Added `<link rel="shortcut icon">` tag
+- `apple-mobile-web-app-title`: "CC" → "Cairo Confessions"
+- Manifest `short_name`: "CC" → "Cairo Confessions"
+
+#### iOS Safe Area Insets (`Layout.tsx`)
+- Header: `paddingTop: env(safe-area-inset-top)` — logo and phase picker clear status bar / Dynamic Island
+- Bottom nav: `bottom: calc(env(safe-area-inset-bottom, 0px) + 24px)` — floats above home indicator
+
+#### PWA Auto-Update Without Reinstall (`server.ts`)
+- Added `Cache-Control: no-store` to all HTML responses from the Worker
+- Prevents iOS from caching the HTML shell — every PWA open fetches fresh content
+- Static JS/CSS assets (content-hashed) served by Cloudflare's asset layer — unaffected
+
+#### Splash Screen (`Layout.tsx`)
+- Full-screen dark splash on PWA open only (`display-mode: standalone` or `navigator.standalone`)
+- Logo scales in + "Cairo Confessions" fades up
+- 1.4s hold, 0.6s fade out
+- Not shown in regular browser visits
+
+### UX
+- Home page "Mine" → "My Space" card label
+
+### Browser Tests
+- F4 ✅ passed (manual)
+- F6 ✅ passed (manual)
+- F8 ✅ closed
+
+---
+
 ## Remaining Work
 
-### Deploy
-- [ ] `wrangler secret put CC_INTAKE_URL` + `CC_INTAKE_TOKEN`
-- [ ] Deploy to app.cairoconfessions.com
+### Next Session Priority 1 — PWA Session Auto-Transfer
+Full plan in memory. Not yet built.
+- GAS: new `getSessionByAnonId(anonId)` action
+- Web: cookie `cc_anonid` written on every `getOrCreateAnonId()` call (iOS shares cookies between Safari and PWA)
+- Web: new server function `getSessionByAnonId`
+- Web: auto-transfer on PWA first open (isPWA + no localStorage + cookie → adoptSession silently)
+- Web: install banner (iOS instruction card + Android one-tap via `beforeinstallprompt`)
+- Store `isPWA: true/false` in GAS session
 
-### UI
-- [ ] Mobile sizing pass
-- [ ] Profile chip in header
+### Next Session Priority 2 — Verify iOS Safe Area
+Safe area fix deployed but needs verification on real iPhone in standalone mode.
+
+### Next Session Priority 3 — /reach Route
+Phase D. Requires Supabase. Plan before building — shares infrastructure with Phase E (accounts).
 
 ### Browser Tests Remaining
-- [ ] F2 — Identity reveal skipped after import
-- [ ] F4 — Conflict Case 1 on truly fresh browser (no local identity)
-- [ ] F6 — Full transfer flow end-to-end (needs confession with non-empty anonIds[])
-- [ ] F8 — Origin browser banner
-- [ ] F9 — 30min background poll
-- [ ] F11 — PWA on iOS Safari
+- F2 — likely auto-fixed by identity modal fix (verify)
+- F9 — 30min background poll (environment-dependent)
+- F11 — PWA iOS (environment-dependent)
 
 ### Future Phases
-- [ ] `/reach` route — threads backend (Supabase) — Phase D
-- [ ] Account system (magic-link) — Phase E
-- [ ] Pipeline modernization — Phase F
+- Account system (Phase E) — after /reach
+- Dev pipeline / GitHub CI (low priority)
+- Tab state persistence — draft text + chat step saved to localStorage (deferred)
