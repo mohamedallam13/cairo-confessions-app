@@ -1159,6 +1159,7 @@ function TrackPage() {
   const [anonId, setAnonId]             = useState("");
   const [myRefs, setMyRefs]             = useState<string[]>([]);
   const [ingestingRefs, setIngestingRefs] = useState<string[]>([]);
+  const [pollingRefs, setPollingRefs]     = useState<Set<string>>(new Set());
   const [activeRef, setActiveRef]       = useState<string | null>(null);
   const [result, setResult]             = useState<TrackResult | null | "not_found">(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -1198,7 +1199,9 @@ function TrackPage() {
     const toFetch = refs.filter((r) => !DEMO[r]);
     if (!toFetch.length) return;
 
+    setPollingRefs(new Set(toFetch));
     const res = await pollTrackingStatuses({ data: { refNums: toFetch } } as never);
+    setPollingRefs(new Set());
     if (!res.ok || !res.entries) return;
 
     setResolvedResults((prev) => {
@@ -1329,7 +1332,7 @@ function TrackPage() {
     }
 
     const ingesting = checkIngesting(ref);
-    if (ingesting) {
+    if (ingesting || (pollingRefs.has(ref) && !resolvedResults[ref])) {
       setActiveRef(ref);
       setResult({ serialNum: "", ingesting: true, status: [], confessionsArray: [], hearts: 0, messages: [] });
       setConfirmCancel(false);
@@ -1562,6 +1565,8 @@ function TrackPage() {
                 ? { serialNum: "", ingesting: true, status: [], confessionsArray: [], hearts: 0, messages: [] }
                 : failedRefs.includes(ref)
                 ? { serialNum: "", ingestionFailed: true, status: [], confessionsArray: [], hearts: 0, messages: [] }
+                : (pollingRefs.has(ref) && !resolvedResults[ref])
+                ? { serialNum: "", ingesting: true, status: [], confessionsArray: [], hearts: 0, messages: [] }
                 : (DEMO[ref] ?? resolvedResults[ref] ?? { serialNum: "", status: [{ status: "pending" as const, timestamp: "" }], confessionsArray: [], hearts: 0, messages: [] })}
               onOpen={() => openRef(ref)}
             />
