@@ -1555,9 +1555,16 @@ function TrackPage() {
         {/* Search */}
         <RefSearchBar onSearch={handleSearch} />
 
-        {/* Cards */}
+        {/* Cards — always newest first by confession timestamp */}
         <div className="flex flex-col gap-3">
-          {myRefs.map((ref) => (
+          {[...myRefs].sort((a, b) => {
+            const ta = getCardCache(a)?.timestamp || getStatusCache(a)?.confessionTimestamp || "";
+            const tb = getCardCache(b)?.timestamp || getStatusCache(b)?.confessionTimestamp || "";
+            if (!ta && !tb) return 0;
+            if (!ta) return -1; // no timestamp yet → assume newest, keep on top
+            if (!tb) return 1;
+            return tb.localeCompare(ta);
+          }).map((ref) => (
             <ConfessionCard
               key={ref}
               refNum={ref}
