@@ -1,6 +1,6 @@
 {
   "name": "Cairo Confessions",
-  "short_name": "CC",
+  "short_name": "Cairo Confessions",
   "description": "Egypt's anonymous confession platform.",
   "start_url": "/",
   "display": "standalone",
