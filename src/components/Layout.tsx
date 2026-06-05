@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import type React from "react";
 import { Link, Outlet, useLocation, useRouter } from "@tanstack/react-router";
-import { ScrollText, Mail, ChevronLeft, Newspaper, CalendarDays } from "lucide-react";
+import { House, Mail, ChevronLeft, Newspaper, CalendarDays } from "lucide-react";
 import { getIngestingRefs, getOrCreateAnonId, detectBrowser, getMyRefs } from "../lib/anonIdentity";
 import { PHASES, type Phase, getPhaseOverride, setPhaseOverride } from "../hooks/useTimePhase";
 
@@ -234,11 +234,11 @@ function ComingSoonTab({ icon, label }: { icon: React.ReactNode; label: string }
     <div className="flex items-center justify-center">
       <button
         onClick={() => { setShown(true); setTimeout(() => setShown(false), 1800); }}
-        className="relative flex flex-col items-center justify-center gap-1.5 px-4 py-1.5 rounded-full"
+        className="relative flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-full"
         style={{ color: "rgba(242,242,242,0.18)" }}
       >
         {icon}
-        <span className="text-[8.5px] font-bold uppercase tracking-[0.18em]">{label}</span>
+        <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap">{label}</span>
         {shown && (
           <span
             className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] px-2.5 py-1 rounded-full"
@@ -517,7 +517,7 @@ export default function Layout() {
               <Link
                 to="/track"
                 search={{ t: undefined, recover: undefined }}
-                className="relative flex flex-col items-center justify-center gap-1.5 px-4 py-1.5 rounded-full"
+                className="relative flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-full"
                 style={{
                   color: pathname === "/track" ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)",
                   transition: "color 2.5s ease",
@@ -537,12 +537,12 @@ export default function Layout() {
                   )}
                 </AnimatePresence>
                 <div className="relative z-10">
-                  <ScrollText size={19} strokeWidth={pathname === "/track" ? 2.2 : 1.6} />
+                  <House size={19} strokeWidth={pathname === "/track" ? 2.2 : 1.6} />
                   {hasIngesting && pathname !== "/track" && (
                     <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
                   )}
                 </div>
-                <span className="text-[8.5px] font-bold uppercase tracking-[0.18em] relative z-10">My Space</span>
+                <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap relative z-10">My Space</span>
               </Link>
             </div>
 
@@ -551,7 +551,7 @@ export default function Layout() {
               <Link
                 to="/reach"
                 search={{ threadId: undefined, ref: undefined, body: undefined }}
-                className="relative flex flex-col items-center justify-center gap-1.5 px-4 py-1.5 rounded-full"
+                className="relative flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-full"
                 style={{
                   color: pathname === "/reach" ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)",
                   transition: "color 2.5s ease",
@@ -571,7 +571,7 @@ export default function Layout() {
                   )}
                 </AnimatePresence>
                 <Mail size={19} strokeWidth={pathname === "/reach" ? 2.2 : 1.6} className="relative z-10" />
-                <span className="text-[8.5px] font-bold uppercase tracking-[0.18em] relative z-10">Reach Out</span>
+                <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap relative z-10">Reach Out</span>
               </Link>
             </div>
           </LayoutGroup>
