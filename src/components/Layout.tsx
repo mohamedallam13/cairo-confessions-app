@@ -528,7 +528,7 @@ export default function Layout() {
                     <motion.div
                       layoutId="pill-indicator"
                       className="absolute"
-                      style={{ inset: "-6px -8px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "16px" }}
+                      style={{ inset: "-6px -8px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px" }}
                       initial={{ opacity: 0, y: 0 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -48 }}
@@ -562,7 +562,7 @@ export default function Layout() {
                     <motion.div
                       layoutId="pill-indicator"
                       className="absolute"
-                      style={{ inset: "-6px -8px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "16px 22px 22px 16px" }}
+                      style={{ inset: "-6px -8px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px" }}
                       initial={{ opacity: 0, y: 0 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -48 }}
