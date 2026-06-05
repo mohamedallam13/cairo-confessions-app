@@ -554,7 +554,7 @@ export default function Layout() {
           <div className="absolute left-1/2 -translate-x-1/2 top-0 h-full flex items-center justify-center" style={{ width: "72px", zIndex: 10 }}>
             <Link
               to="/confess-here"
-              className="flex items-center justify-center w-[67px] h-[67px] active:scale-95 transition-transform"
+              className="flex items-center justify-center w-[70px] h-[70px] active:scale-95 transition-transform"
               style={{
                 background: pathname === "/confess-here"
                   ? `linear-gradient(135deg, var(--phase-accent,#04C9F4) 0%, rgba(var(--phase-accent-rgb,4,201,244),0.75) 100%)`
