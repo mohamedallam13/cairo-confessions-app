@@ -218,36 +218,48 @@ import logoIcon from "../assets/logo-icon.png";
 import { useTimePhase } from "../hooks/useTimePhase";
 import CairoBackground from "./CairoBackground";
 
-const TOP_LEVEL = new Set(["/", "/track", "/confess-here", "/reach", "/login"]);
+const TOP_LEVEL = new Set(["/", "/track", "/confess-here", "/reach", "/login", "/home", "/events"]);
 
 function pageTitle(pathname: string): string {
   if (pathname === "/track") return "My Space";
   if (pathname === "/confess-here") return "Say something";
   if (pathname === "/reach") return "Reach a confessor";
+  if (pathname === "/home") return "Feed";
+  if (pathname === "/events") return "Events";
   if (pathname === "/login") return "Sign in";
   return "";
 }
 
-function ComingSoonTab({ icon, label }: { icon: React.ReactNode; label: string }) {
-  const [shown, setShown] = useState(false);
+function ComingSoonTab({ icon, label, to, isLeft }: { icon: React.ReactNode; label: string; to: string; isLeft?: boolean }) {
+  const { pathname } = useLocation();
+  const isActive = pathname === to;
   return (
     <div className="flex items-center justify-center">
-      <button
-        onClick={() => { setShown(true); setTimeout(() => setShown(false), 1800); }}
-        className="relative flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-full"
-        style={{ color: "rgba(242,242,242,0.18)" }}
+      <Link
+        to={to as "/home" | "/events"}
+        className="relative flex flex-col items-center justify-center gap-1 px-2 py-1"
+        style={{ color: isActive ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)", transition: "color 2.5s ease" }}
       >
-        {icon}
-        <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap">{label}</span>
-        {shown && (
-          <span
-            className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] px-2.5 py-1 rounded-full"
-            style={{ background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(242,242,242,0.5)" }}
-          >
-            Coming soon
-          </span>
-        )}
-      </button>
+        <AnimatePresence>
+          {isActive && (
+            <motion.div
+              layoutId="pill-indicator"
+              className="absolute"
+              style={{
+                inset: isLeft ? "-5px -8px -5px 3px" : "-5px 3px -5px -8px",
+                background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)",
+                borderRadius: isLeft ? "10px 9999px 9999px 10px" : "9999px 10px 10px 9999px",
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, y: -48 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            />
+          )}
+        </AnimatePresence>
+        <div className="relative z-10">{icon}</div>
+        <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap relative z-10">{label}</span>
+      </Link>
     </div>
   );
 }
@@ -471,11 +483,11 @@ export default function Layout() {
           }}
         >
           <LayoutGroup>
-            {/* Home — disabled */}
-            <ComingSoonTab icon={<Newspaper size={19} strokeWidth={1.6} />} label="Home" />
+            {/* Home */}
+            <ComingSoonTab icon={<Newspaper size={19} strokeWidth={1.6} />} label="Home" to="/home" isLeft />
 
-            {/* Events — disabled */}
-            <ComingSoonTab icon={<CalendarDays size={19} strokeWidth={1.6} />} label="Events" />
+            {/* Events */}
+            <ComingSoonTab icon={<CalendarDays size={19} strokeWidth={1.6} />} label="Events" to="/events" />
 
             {/* Confess — center */}
             <div className="relative flex items-center justify-center">
@@ -549,7 +561,7 @@ export default function Layout() {
                     <motion.div
                       layoutId="pill-indicator"
                       className="absolute"
-                      style={{ inset: "-6px -8px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px 14px 14px 9999px" /* rightmost — left round, right tight against nav edge */ }}
+                      style={{ inset: "-5px 3px -5px -8px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px 10px 10px 9999px" /* rightmost — left round, right pulls back from nav edge */ }}
                       initial={{ opacity: 0, y: 0 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -48 }}
