@@ -468,11 +468,11 @@ export default function Layout() {
         {/* Outer wrapper — tall enough for confess button to poke out */}
         <div className="relative" style={{ height: "64px" }}>
 
-          {/* Nav pill — clipped so indicators never overflow corners */}
+          {/* Nav pill — same height as confess button (64px) */}
           <div
             className="absolute overflow-hidden"
             style={{
-              inset: "8px 0",
+              inset: "0",
               background: "rgba(15,18,20,0.85)",
               backdropFilter: "blur(24px)",
               border: "1.5px solid var(--phase-nav-border, rgba(255,255,255,0.12))",
