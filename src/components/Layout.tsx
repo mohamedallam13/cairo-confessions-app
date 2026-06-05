@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
+import type React from "react";
 import { Link, Outlet, useLocation, useRouter } from "@tanstack/react-router";
-import { Library, Mail, ChevronLeft } from "lucide-react";
+import { ScrollText, Mail, ChevronLeft, Newspaper, CalendarDays } from "lucide-react";
 import { getIngestingRefs, getOrCreateAnonId, detectBrowser, getMyRefs } from "../lib/anonIdentity";
 import { PHASES, type Phase, getPhaseOverride, setPhaseOverride } from "../hooks/useTimePhase";
 
@@ -220,11 +221,35 @@ import CairoBackground from "./CairoBackground";
 const TOP_LEVEL = new Set(["/", "/track", "/confess-here", "/reach", "/login"]);
 
 function pageTitle(pathname: string): string {
-  if (pathname === "/track") return "My Confessions";
+  if (pathname === "/track") return "My Space";
   if (pathname === "/confess-here") return "Say something";
   if (pathname === "/reach") return "Reach a confessor";
   if (pathname === "/login") return "Sign in";
   return "";
+}
+
+function ComingSoonTab({ icon, label }: { icon: React.ReactNode; label: string }) {
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="flex items-center justify-center">
+      <button
+        onClick={() => { setShown(true); setTimeout(() => setShown(false), 1800); }}
+        className="relative flex flex-col items-center justify-center gap-1.5 px-4 py-1.5 rounded-full"
+        style={{ color: "rgba(242,242,242,0.18)" }}
+      >
+        {icon}
+        <span className="text-[8.5px] font-bold uppercase tracking-[0.18em]">{label}</span>
+        {shown && (
+          <span
+            className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] px-2.5 py-1 rounded-full"
+            style={{ background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(242,242,242,0.5)" }}
+          >
+            Coming soon
+          </span>
+        )}
+      </button>
+    </div>
+  );
 }
 
 export default function Layout() {
@@ -436,7 +461,7 @@ export default function Layout() {
         <div
           className="relative grid py-2"
           style={{
-            gridTemplateColumns: "1fr 72px 1fr",
+            gridTemplateColumns: "1fr 1fr 72px 1fr 1fr",
             background: "rgba(15,18,20,0.85)",
             backdropFilter: "blur(24px)",
             border: "1.5px solid var(--phase-nav-border, rgba(255,255,255,0.12))",
@@ -446,41 +471,13 @@ export default function Layout() {
           }}
         >
           <LayoutGroup>
-            {/* Mine */}
-            <div className="flex items-center justify-center">
-              <Link
-                to="/track"
-                search={{ t: undefined, recover: undefined }}
-                className="relative flex flex-col items-center justify-center gap-1.5 px-5 py-1.5 rounded-full"
-                style={{
-                  color: pathname === "/track" ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)",
-                  transition: "color 2.5s ease",
-                }}
-              >
-                <AnimatePresence>
-                  {pathname === "/track" && (
-                    <motion.div
-                      layoutId="pill-indicator"
-                      className="absolute inset-0 rounded-full"
-                      style={{ background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)" }}
-                      initial={{ opacity: 0, y: 0 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -48 }}
-                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    />
-                  )}
-                </AnimatePresence>
-                <div className="relative z-10">
-                  <Library size={19} strokeWidth={pathname === "/track" ? 2.2 : 1.6} />
-                  {hasIngesting && pathname !== "/track" && (
-                    <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
-                  )}
-                </div>
-                <span className="text-[8.5px] font-bold uppercase tracking-[0.18em] relative z-10">My Space</span>
-              </Link>
-            </div>
+            {/* Home — disabled */}
+            <ComingSoonTab icon={<Newspaper size={19} strokeWidth={1.6} />} label="Home" />
 
-            {/* Confess — center, inside the pill */}
+            {/* Events — disabled */}
+            <ComingSoonTab icon={<CalendarDays size={19} strokeWidth={1.6} />} label="Events" />
+
+            {/* Confess — center */}
             <div className="relative flex items-center justify-center">
               <AnimatePresence>
                 {pathname === "/confess-here" && (
@@ -515,12 +512,46 @@ export default function Layout() {
               </Link>
             </div>
 
+            {/* My Space */}
+            <div className="flex items-center justify-center">
+              <Link
+                to="/track"
+                search={{ t: undefined, recover: undefined }}
+                className="relative flex flex-col items-center justify-center gap-1.5 px-4 py-1.5 rounded-full"
+                style={{
+                  color: pathname === "/track" ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)",
+                  transition: "color 2.5s ease",
+                }}
+              >
+                <AnimatePresence>
+                  {pathname === "/track" && (
+                    <motion.div
+                      layoutId="pill-indicator"
+                      className="absolute inset-0 rounded-full"
+                      style={{ background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)" }}
+                      initial={{ opacity: 0, y: 0 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -48 }}
+                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    />
+                  )}
+                </AnimatePresence>
+                <div className="relative z-10">
+                  <ScrollText size={19} strokeWidth={pathname === "/track" ? 2.2 : 1.6} />
+                  {hasIngesting && pathname !== "/track" && (
+                    <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
+                  )}
+                </div>
+                <span className="text-[8.5px] font-bold uppercase tracking-[0.18em] relative z-10">My Space</span>
+              </Link>
+            </div>
+
             {/* Reach Out */}
             <div className="flex items-center justify-center">
               <Link
                 to="/reach"
                 search={{ threadId: undefined, ref: undefined, body: undefined }}
-                className="relative flex flex-col items-center justify-center gap-1.5 px-5 py-1.5 rounded-full"
+                className="relative flex flex-col items-center justify-center gap-1.5 px-4 py-1.5 rounded-full"
                 style={{
                   color: pathname === "/reach" ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)",
                   transition: "color 2.5s ease",
