@@ -230,17 +230,14 @@ function pageTitle(pathname: string): string {
   return "";
 }
 
-function ComingSoonTab({ icon, label, to, edge }: { icon: React.ReactNode; label: string; to: string; edge?: "left" | "right" }) {
+function ComingSoonTab({ icon, label, to }: { icon: React.ReactNode; label: string; to: string }) {
   const { pathname } = useLocation();
   const isActive = pathname === to;
-  const radius = edge === "left" ? "16px 9999px 9999px 16px"
-               : edge === "right" ? "9999px 16px 16px 9999px"
-               : "9999px";
   return (
     <div className="flex items-center justify-center">
       <Link
         to={to as "/home" | "/events"}
-        className="relative flex flex-col items-center justify-center gap-1 px-2 py-2"
+        className="relative w-full h-full flex flex-col items-center justify-center gap-1"
         style={{ color: isActive ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)", transition: "color 2.5s ease" }}
       >
         <AnimatePresence>
@@ -248,7 +245,7 @@ function ComingSoonTab({ icon, label, to, edge }: { icon: React.ReactNode; label
             <motion.div
               layoutId="pill-indicator"
               className="absolute"
-              style={{ inset: "0 -5px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: radius }}
+              style={{ inset: "4px -4px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px" }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, y: -48 }}
@@ -468,112 +465,113 @@ export default function Layout() {
 
       {/* Bottom nav — hidden on landing page */}
       {!isHome && <nav className="fixed left-1/2 -translate-x-1/2 z-50 w-[min(440px,calc(100%-32px))]" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}>
+        {/* Outer wrapper — tall enough for confess button to poke out */}
+        <div className="relative" style={{ height: "64px" }}>
 
-        <div
-          className="relative grid"
-          style={{
-            gridTemplateColumns: "1fr 1fr 72px 1fr 1fr",
-            padding: "4px 8px",
-            background: "rgba(15,18,20,0.85)",
-            backdropFilter: "blur(24px)",
-            border: "1.5px solid var(--phase-nav-border, rgba(255,255,255,0.12))",
-            borderRadius: "9999px",
-            boxShadow: `0 24px 48px -12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08)`,
-            transition: "border-color 2.5s ease",
-          }}
-        >
-          <LayoutGroup>
-            {/* Home */}
-            <ComingSoonTab icon={<Newspaper size={19} strokeWidth={1.6} />} label="Home" to="/home" edge="left" />
+          {/* Nav pill — clipped so indicators never overflow corners */}
+          <div
+            className="absolute overflow-hidden"
+            style={{
+              inset: "8px 0",
+              background: "rgba(15,18,20,0.85)",
+              backdropFilter: "blur(24px)",
+              border: "1.5px solid var(--phase-nav-border, rgba(255,255,255,0.12))",
+              borderRadius: "9999px",
+              boxShadow: `0 24px 48px -12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08)`,
+              transition: "border-color 2.5s ease",
+            }}
+          >
+            <LayoutGroup>
+              <div className="grid h-full" style={{ gridTemplateColumns: "1fr 1fr 72px 1fr 1fr", padding: "0 6px" }}>
 
-            {/* Events */}
-            <ComingSoonTab icon={<CalendarDays size={19} strokeWidth={1.6} />} label="Events" to="/events" />
+                {/* Home */}
+                <ComingSoonTab icon={<Newspaper size={19} strokeWidth={1.6} />} label="Home" to="/home" />
 
-            {/* Confess — center */}
-            <div className="relative flex items-center justify-center">
-              <Link
-                to="/confess-here"
-                className="relative z-10 flex items-center justify-center w-[64px] h-[64px] active:scale-95 transition-transform"
-                style={{
-                  background: pathname === "/confess-here"
-                    ? `linear-gradient(135deg, var(--phase-accent,#04C9F4) 0%, rgba(var(--phase-accent-rgb,4,201,244),0.75) 100%)`
-                    : `rgba(255,255,255,0.06)`,
-                  borderRadius: "9999px",
-                  border: pathname === "/confess-here" ? "none" : "1px solid rgba(255,255,255,0.10)",
-                  boxShadow: pathname === "/confess-here"
-                    ? `0 6px 20px -4px var(--phase-glow,rgba(4,201,244,0.45))`
-                    : "none",
-                  transition: "background 0.4s ease, box-shadow 0.4s ease",
-                }}
-                aria-label="Confess"
-              >
-                <TypingBubbleIcon size={26} color={pathname === "/confess-here" ? "#050606" : `rgba(var(--phase-accent-rgb,4,201,244),0.5)`} />
-              </Link>
-            </div>
+                {/* Events */}
+                <ComingSoonTab icon={<CalendarDays size={19} strokeWidth={1.6} />} label="Events" to="/events" />
 
-            {/* My Space */}
-            <div className="flex items-center justify-center">
-              <Link
-                to="/track"
-                search={{ t: undefined, recover: undefined }}
-                className="relative flex flex-col items-center justify-center gap-1 px-2 py-2"
-                style={{
-                  color: pathname === "/track" ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)",
-                  transition: "color 2.5s ease",
-                }}
-              >
-                <AnimatePresence>
-                  {pathname === "/track" && (
-                    <motion.div
-                      layoutId="pill-indicator"
-                      className="absolute"
-                      style={{ inset: "0 -5px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px" }}
-                      initial={{ opacity: 0, y: 0 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -48 }}
-                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    />
-                  )}
-                </AnimatePresence>
-                <div className="relative z-10">
-                  <House size={19} strokeWidth={pathname === "/track" ? 2.2 : 1.6} />
-                  {hasIngesting && pathname !== "/track" && (
-                    <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
-                  )}
+                {/* Confess spacer */}
+                <div />
+
+                {/* My Space */}
+                <div className="flex items-center justify-center">
+                  <Link
+                    to="/track"
+                    search={{ t: undefined, recover: undefined }}
+                    className="relative w-full h-full flex flex-col items-center justify-center gap-1"
+                    style={{ color: pathname === "/track" ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)", transition: "color 2.5s ease" }}
+                  >
+                    <AnimatePresence>
+                      {pathname === "/track" && (
+                        <motion.div
+                          layoutId="pill-indicator"
+                          className="absolute"
+                          style={{ inset: "4px -4px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px" }}
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -48 }}
+                          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                        />
+                      )}
+                    </AnimatePresence>
+                    <div className="relative z-10">
+                      <House size={19} strokeWidth={pathname === "/track" ? 2.2 : 1.6} />
+                      {hasIngesting && pathname !== "/track" && (
+                        <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
+                      )}
+                    </div>
+                    <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap relative z-10">My Space</span>
+                  </Link>
                 </div>
-                <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap relative z-10">My Space</span>
-              </Link>
-            </div>
 
-            {/* Reach Out */}
-            <div className="flex items-center justify-center">
-              <Link
-                to="/reach"
-                search={{ threadId: undefined, ref: undefined, body: undefined }}
-                className="relative flex flex-col items-center justify-center gap-1 px-2 py-2"
-                style={{
-                  color: pathname === "/reach" ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)",
-                  transition: "color 2.5s ease",
-                }}
-              >
-                <AnimatePresence>
-                  {pathname === "/reach" && (
-                    <motion.div
-                      layoutId="pill-indicator"
-                      className="absolute"
-                      style={{ inset: "0 -5px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px 16px 16px 9999px" }}
-                      initial={{ opacity: 0, y: 0 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -48 }}
-                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    />
-                  )}
-                </AnimatePresence>
-                <Mail size={19} strokeWidth={pathname === "/reach" ? 2.2 : 1.6} className="relative z-10" />
-                <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap relative z-10">Reach Out</span>
-              </Link>
-            </div>
-          </LayoutGroup>
+                {/* Reach Out */}
+                <div className="flex items-center justify-center">
+                  <Link
+                    to="/reach"
+                    search={{ threadId: undefined, ref: undefined, body: undefined }}
+                    className="relative w-full h-full flex flex-col items-center justify-center gap-1"
+                    style={{ color: pathname === "/reach" ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)", transition: "color 2.5s ease" }}
+                  >
+                    <AnimatePresence>
+                      {pathname === "/reach" && (
+                        <motion.div
+                          layoutId="pill-indicator"
+                          className="absolute"
+                          style={{ inset: "4px -4px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px" }}
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -48 }}
+                          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                        />
+                      )}
+                    </AnimatePresence>
+                    <Mail size={19} strokeWidth={pathname === "/reach" ? 2.2 : 1.6} className="relative z-10" />
+                    <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap relative z-10">Reach Out</span>
+                  </Link>
+                </div>
+
+              </div>
+            </LayoutGroup>
+          </div>
+
+          {/* Confess button — sits on top, unclipped */}
+          <div className="absolute left-1/2 -translate-x-1/2 top-0 h-full flex items-center justify-center" style={{ width: "72px", zIndex: 10 }}>
+            <Link
+              to="/confess-here"
+              className="flex items-center justify-center w-[64px] h-[64px] active:scale-95 transition-transform"
+              style={{
+                background: pathname === "/confess-here"
+                  ? `linear-gradient(135deg, var(--phase-accent,#04C9F4) 0%, rgba(var(--phase-accent-rgb,4,201,244),0.75) 100%)`
+                  : `rgba(255,255,255,0.06)`,
+                borderRadius: "9999px",
+                border: pathname === "/confess-here" ? "none" : "1px solid rgba(255,255,255,0.10)",
+                boxShadow: pathname === "/confess-here"
+                  ? `0 6px 20px -4px var(--phase-glow,rgba(4,201,244,0.45))`
+                  : "none",
+                transition: "background 0.4s ease, box-shadow 0.4s ease",
+              }}
+              aria-label="Confess"
+            >
+              <TypingBubbleIcon size={26} color={pathname === "/confess-here" ? "#050606" : `rgba(var(--phase-accent-rgb,4,201,244),0.5)`} />
+            </Link>
+          </div>
+
         </div>
       </nav>}
     </div>
