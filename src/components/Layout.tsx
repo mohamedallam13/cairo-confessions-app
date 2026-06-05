@@ -245,7 +245,7 @@ function ComingSoonTab({ icon, label, to }: { icon: React.ReactNode; label: stri
             <motion.div
               layoutId="pill-indicator"
               className="absolute"
-              style={{ inset: "3px 1px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px" }}
+              style={{ inset: "3px 3px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px" }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, y: -48 }}
@@ -506,7 +506,7 @@ export default function Layout() {
                         <motion.div
                           layoutId="pill-indicator"
                           className="absolute"
-                          style={{ inset: "3px 1px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px" }}
+                          style={{ inset: "3px 3px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px" }}
                           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -48 }}
                           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                         />
@@ -535,7 +535,7 @@ export default function Layout() {
                         <motion.div
                           layoutId="pill-indicator"
                           className="absolute"
-                          style={{ inset: "3px 1px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px" }}
+                          style={{ inset: "3px 3px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px" }}
                           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -48 }}
                           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                         />
