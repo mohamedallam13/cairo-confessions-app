@@ -560,7 +560,7 @@ export default function Layout() {
                   ? `linear-gradient(135deg, var(--phase-accent,#04C9F4) 0%, rgba(var(--phase-accent-rgb,4,201,244),0.75) 100%)`
                   : `rgba(255,255,255,0.06)`,
                 borderRadius: "9999px",
-                border: pathname === "/confess-here" ? "none" : "1px solid rgba(255,255,255,0.10)",
+                border: pathname === "/confess-here" ? "none" : "1.5px solid rgba(255,255,255,0.25)",
                 boxShadow: pathname === "/confess-here"
                   ? `0 6px 20px -4px var(--phase-glow,rgba(4,201,244,0.45))`
                   : "none",
