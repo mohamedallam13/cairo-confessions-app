@@ -527,8 +527,8 @@ export default function Layout() {
                   {pathname === "/track" && (
                     <motion.div
                       layoutId="pill-indicator"
-                      className="absolute inset-0 rounded-full"
-                      style={{ background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)" }}
+                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl"
+                      style={{ background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", width: "calc(100% + 14px)", height: "44px" }}
                       initial={{ opacity: 0, y: 0 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -48 }}
@@ -561,8 +561,8 @@ export default function Layout() {
                   {pathname === "/reach" && (
                     <motion.div
                       layoutId="pill-indicator"
-                      className="absolute inset-0 rounded-full"
-                      style={{ background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)" }}
+                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl"
+                      style={{ background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", width: "calc(100% + 14px)", height: "44px" }}
                       initial={{ opacity: 0, y: 0 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -48 }}
