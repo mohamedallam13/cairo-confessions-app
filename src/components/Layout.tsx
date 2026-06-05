@@ -564,6 +564,7 @@ export default function Layout() {
                 boxShadow: pathname === "/confess-here"
                   ? `0 6px 20px -4px var(--phase-glow,rgba(4,201,244,0.45))`
                   : "none",
+                backdropFilter: pathname !== "/confess-here" ? "blur(20px)" : "none",
                 transition: "background 0.4s ease, box-shadow 0.4s ease",
               }}
               aria-label="Confess"
