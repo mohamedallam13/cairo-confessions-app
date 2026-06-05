@@ -230,14 +230,17 @@ function pageTitle(pathname: string): string {
   return "";
 }
 
-function ComingSoonTab({ icon, label, to, isLeft }: { icon: React.ReactNode; label: string; to: string; isLeft?: boolean }) {
+function ComingSoonTab({ icon, label, to, edge }: { icon: React.ReactNode; label: string; to: string; edge?: "left" | "right" }) {
   const { pathname } = useLocation();
   const isActive = pathname === to;
+  const radius = edge === "left" ? "16px 9999px 9999px 16px"
+               : edge === "right" ? "9999px 16px 16px 9999px"
+               : "9999px";
   return (
     <div className="flex items-center justify-center">
       <Link
         to={to as "/home" | "/events"}
-        className="relative flex flex-col items-center justify-center gap-1 px-2 py-1"
+        className="relative flex flex-col items-center justify-center gap-1 px-2 py-2"
         style={{ color: isActive ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)", transition: "color 2.5s ease" }}
       >
         <AnimatePresence>
@@ -245,11 +248,7 @@ function ComingSoonTab({ icon, label, to, isLeft }: { icon: React.ReactNode; lab
             <motion.div
               layoutId="pill-indicator"
               className="absolute"
-              style={{
-                inset: isLeft ? "-5px -8px -5px 3px" : "-5px 3px -5px -8px",
-                background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)",
-                borderRadius: isLeft ? "10px 9999px 9999px 10px" : "9999px 10px 10px 9999px",
-              }}
+              style={{ inset: "0 -5px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: radius }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, y: -48 }}
@@ -471,9 +470,10 @@ export default function Layout() {
       {!isHome && <nav className="fixed left-1/2 -translate-x-1/2 z-50 w-[min(440px,calc(100%-32px))]" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}>
 
         <div
-          className="relative grid py-2"
+          className="relative grid"
           style={{
             gridTemplateColumns: "1fr 1fr 72px 1fr 1fr",
+            padding: "4px 8px",
             background: "rgba(15,18,20,0.85)",
             backdropFilter: "blur(24px)",
             border: "1.5px solid var(--phase-nav-border, rgba(255,255,255,0.12))",
@@ -484,7 +484,7 @@ export default function Layout() {
         >
           <LayoutGroup>
             {/* Home */}
-            <ComingSoonTab icon={<Newspaper size={19} strokeWidth={1.6} />} label="Home" to="/home" isLeft />
+            <ComingSoonTab icon={<Newspaper size={19} strokeWidth={1.6} />} label="Home" to="/home" edge="left" />
 
             {/* Events */}
             <ComingSoonTab icon={<CalendarDays size={19} strokeWidth={1.6} />} label="Events" to="/events" />
@@ -516,7 +516,7 @@ export default function Layout() {
               <Link
                 to="/track"
                 search={{ t: undefined, recover: undefined }}
-                className="relative flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-full"
+                className="relative flex flex-col items-center justify-center gap-1 px-2 py-2"
                 style={{
                   color: pathname === "/track" ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)",
                   transition: "color 2.5s ease",
@@ -527,7 +527,7 @@ export default function Layout() {
                     <motion.div
                       layoutId="pill-indicator"
                       className="absolute"
-                      style={{ inset: "-6px -8px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px" /* center tab — symmetric */ }}
+                      style={{ inset: "0 -5px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px" }}
                       initial={{ opacity: 0, y: 0 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -48 }}
@@ -550,7 +550,7 @@ export default function Layout() {
               <Link
                 to="/reach"
                 search={{ threadId: undefined, ref: undefined, body: undefined }}
-                className="relative flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-full"
+                className="relative flex flex-col items-center justify-center gap-1 px-2 py-2"
                 style={{
                   color: pathname === "/reach" ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)",
                   transition: "color 2.5s ease",
@@ -561,7 +561,7 @@ export default function Layout() {
                     <motion.div
                       layoutId="pill-indicator"
                       className="absolute"
-                      style={{ inset: "-5px 3px -5px -8px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px 10px 10px 9999px" /* rightmost — left round, right pulls back from nav edge */ }}
+                      style={{ inset: "0 -5px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px 16px 16px 9999px" }}
                       initial={{ opacity: 0, y: 0 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -48 }}
