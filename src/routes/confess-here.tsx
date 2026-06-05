@@ -27,6 +27,7 @@ interface FlowStep {
   options?: string[];
   skip?: boolean;
   skipLabel?: string;
+  description?: string;
 }
 
 const FLOW: FlowStep[] = [
@@ -41,6 +42,7 @@ const FLOW: FlowStep[] = [
     message: "Are you male or female?",
     type: "chips",
     options: ["Male", "Female"],
+    description: "Let's start with the basics.",
   },
   {
     id: "age",
@@ -61,10 +63,11 @@ const FLOW: FlowStep[] = [
       "South Upper Egypt",
       "Outside Egypt",
     ],
+    description: "This helps us connect you down the road with people near you who might be sharing the same circumstance.",
   },
   {
     id: "facebook_notice",
-    message: "Please be aware that your confession will be posted on CC's Facebook Page. We cannot take down confessions once submitted.",
+    message: "Please be aware that your confession will be posted on CC's Facebook and Instagram. We cannot take down confessions once submitted. If you do not want to proceed, you can close the window now to abort.",
     type: "info",
   },
   {
@@ -102,6 +105,12 @@ const FLOW: FlowStep[] = [
     message: "Tag your confession — pick all that apply.",
     type: "multichips",
     options: ["Dream", "Pain", "Lie", "Guilt", "Fantasy", "Random Feeling", "Truth", "Wild Incident", "First Experience", "Rant", "Opinion"],
+  },
+  {
+    id: "contactable",
+    message: "Would you like readers to be able to send you a support message about this confession?",
+    type: "chips",
+    options: ["Yes, reach out to me", "No thanks"],
   },
   {
     id: "refreveal",
@@ -498,8 +507,25 @@ function ChatView({ body, flow, refId, submitting, onDone }: { body: string; flo
   useEffect(() => {
     const snippet = body.length > 100 ? body.slice(0, 100) + "…" : body;
     setMessages([{ id: "confession", role: "user", content: snippet }]);
-    const t = setTimeout(() => askStep(0), 500);
-    return () => clearTimeout(t);
+
+    // Freyal welcome sequence before first question
+    let t1: ReturnType<typeof setTimeout>;
+    let t2: ReturnType<typeof setTimeout>;
+    let t3: ReturnType<typeof setTimeout>;
+    let t4: ReturnType<typeof setTimeout>;
+    t1 = setTimeout(() => setTyping(true), 400);
+    t2 = setTimeout(() => {
+      setMessages((m) => [...m, { id: "welcome-1", role: "bot", content: "Hey there. Don't worry, you're in the right place. We're here for you." }]);
+      setTyping(false);
+      t3 = setTimeout(() => setTyping(true), 300);
+    }, 1100);
+    t3 = setTimeout(() => setTyping(true), 1400);
+    t4 = setTimeout(() => {
+      setMessages((m) => [...m, { id: "welcome-2", role: "bot", content: "This is Cairo Confessions, a community that is filled with the bright, open minds of the Egyptian people." }]);
+      setTyping(false);
+      setTimeout(() => askStep(0), 600);
+    }, 2300);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
   }, []);
 
   useEffect(() => {
@@ -513,8 +539,17 @@ function ChatView({ body, flow, refId, submitting, onDone }: { body: string; flo
     setTimeout(() => {
       setMessages((m) => m.some((x) => x.id === `bot-${idx}`) ? m : [...m, { id: `bot-${idx}`, role: "bot", content: flow[idx].message }]);
       setTyping(false);
-      setTimeout(() => setInputReady(true), 120);
       setStepIdx(idx);
+      if (flow[idx].description) {
+        setTimeout(() => setTyping(true), 200);
+        setTimeout(() => {
+          setMessages((m) => [...m, { id: `bot-${idx}-desc`, role: "bot", content: flow[idx].description! }]);
+          setTyping(false);
+          setTimeout(() => setInputReady(true), 120);
+        }, 850);
+      } else {
+        setTimeout(() => setInputReady(true), 120);
+      }
     }, 650);
   }
 
@@ -581,7 +616,7 @@ function ChatView({ body, flow, refId, submitting, onDone }: { body: string; flo
                 <AgeInput onAnswer={answer} />
               )}
               {currentStep.type === "info" && (
-                <InfoInput onNext={() => answer("")} />
+                <InfoInput onNext={() => answer("Got it")} />
               )}
               {currentStep.type === "refreveal" && (
                 <RefRevealInput refId={refId} onNext={() => answer("Saved")} />
@@ -721,18 +756,19 @@ function ConfessPage() {
     const { browser, device } = getBrowserDetails();
 
     const payload: SubmitPayload = {
-      refNum:   ref,
+      refNum:      ref,
       anonId,
-      mood:     answers["mood"]     ?? "",
-      gender:   answers["gender"]   ?? "",
-      age:      parseInt(answers["age"] ?? "0", 10),
-      location: answers["location"] ?? "",
-      email:    answers["email"]    ?? "",
+      mood:        answers["mood"]     ?? "",
+      gender:      answers["gender"]   ?? "",
+      age:         parseInt(answers["age"] ?? "0", 10),
+      location:    answers["location"] ?? "",
+      email:       answers["email"] ?? "",
       body,
-      category: answers["category"] ?? "",
-      tags:     answers["tags"] ? answers["tags"].split(", ") : [],
+      category:    answers["category"] ?? "",
+      tags:        answers["tags"] ? answers["tags"].split(", ") : [],
       browser,
       device,
+      contactable: answers["contactable"] === "Yes, reach out to me",
     };
 
     try {

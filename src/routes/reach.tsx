@@ -66,13 +66,79 @@ function upsertThread(thread: Thread) {
 
 // ─── Quick messages ────────────────────────────────────────────────────────────
 
-const QUICK = [
-  "I read yours and felt less alone.",
-  "You're braver than you know.",
-  "I've been there too. It gets softer.",
-  "Sending you warmth from across the city.",
-  "You don't have to carry it alone.",
+type MessageType = "support" | "relate" | "admiration" | "advice" | "gratitude" | "criticism";
+
+const MESSAGE_TYPES: { key: MessageType; label: string }[] = [
+  { key: "support",    label: "Support"    },
+  { key: "relate",     label: "Relate"     },
+  { key: "admiration", label: "Admiration" },
+  { key: "advice",     label: "Advice"     },
+  { key: "gratitude",  label: "Gratitude"  },
+  { key: "criticism",  label: "Criticism"  },
 ];
+
+const QUICK: Record<MessageType, string[]> = {
+  support: [
+    "I read yours and felt less alone.",
+    "You're braver than you know.",
+    "I've been there too. It gets softer.",
+    "Sending you warmth from across the city.",
+    "You don't have to carry it alone.",
+    "Thank you for saying this out loud.",
+    "Whatever happens next, you're not invisible.",
+    "I hope someone holds this with you.",
+  ],
+  relate: [
+    "This could have been written by me.",
+    "I know this feeling more than you'd think.",
+    "I've been exactly where you are.",
+    "You're not the only one carrying this.",
+    "Same city, same weight.",
+    "This hit closer to home than I expected.",
+    "You're not alone in this, even if it feels that way.",
+    "I've never told anyone either.",
+  ],
+  admiration: [
+    "It takes real courage to say this out loud.",
+    "Thank you for sharing this with the city.",
+    "You put into words what many of us can't.",
+    "This stayed with me.",
+    "I see you.",
+    "You're stronger than you think.",
+    "This is the kind of honesty the world needs more of.",
+    "I respect you for this.",
+  ],
+  advice: [
+    "Have you talked to someone about this?",
+    "Sometimes the first step is just saying it — you've done that.",
+    "Whatever you decide, make sure it's for you.",
+    "Give yourself permission to not have it figured out.",
+    "You deserve support beyond this screen.",
+    "One step at a time.",
+    "Be gentle with yourself through this.",
+    "This might be worth writing down somewhere private too.",
+  ],
+  gratitude: [
+    "Thank you for being honest.",
+    "Posts like yours make this city feel less cold.",
+    "You reminded me I'm not alone either.",
+    "This made my day a little more human.",
+    "Thank you for trusting the city with this.",
+    "You gave words to something I couldn't.",
+    "This matters more than you know.",
+    "Glad you shared it.",
+  ],
+  criticism: [
+    "I think there's another side worth considering.",
+    "Have you thought about how this affects others?",
+    "I disagree, but I respect that you shared.",
+    "This made me uncomfortable, but I'm listening.",
+    "I hope you find a different path forward.",
+    "There's more nuance here than it seems.",
+    "I'd encourage you to reflect on this more.",
+    "I hear you, but I don't fully agree.",
+  ],
+};
 
 // ─── Thread view ───────────────────────────────────────────────────────────────
 
@@ -249,9 +315,11 @@ function ThreadView({ thread, perspective, onBack, onUpdated, onDeleted }: {
 // ─── New message tab ───────────────────────────────────────────────────────────
 
 function NewMessageTab({ onSent }: { onSent: (t: Thread) => void }) {
-  const [refId, setRefId] = useState("");
-  const [msg, setMsg] = useState("");
-  const [sent, setSent] = useState(false);
+  const [refId, setRefId]   = useState("");
+  const [msg, setMsg]       = useState("");
+  const [email, setEmail]   = useState("");
+  const [type, setType]     = useState<MessageType>("support");
+  const [sent, setSent]     = useState(false);
 
   const canSend = refId.trim().length >= 3 && msg.trim().length >= 4;
 
@@ -271,11 +339,17 @@ function NewMessageTab({ onSent }: { onSent: (t: Thread) => void }) {
       messages: [firstMsg],
       lastActivity: firstMsg.sentAt,
       status: "pending",
-      // TODO: persist to Supabase with anonId — tie to account later
+      // TODO: persist to Supabase with anonId, type, email
     };
     upsertThread(thread);
     onSent(thread);
     setSent(true);
+  }
+
+  // Reset quick message when type changes if it belonged to previous type
+  function selectType(t: MessageType) {
+    if (!QUICK[t].includes(msg)) setMsg("");
+    setType(t);
   }
 
   if (sent) return (
@@ -294,7 +368,7 @@ function NewMessageTab({ onSent }: { onSent: (t: Thread) => void }) {
         </p>
       </div>
       <button
-        onClick={() => { setSent(false); setRefId(""); setMsg(""); }}
+        onClick={() => { setSent(false); setRefId(""); setMsg(""); setEmail(""); setType("support"); }}
         className="w-full flex items-center justify-center px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all active:scale-[0.98]"
         style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: "13px", color: "rgba(242,242,242,0.55)" }}
       >
@@ -319,9 +393,28 @@ function NewMessageTab({ onSent }: { onSent: (t: Thread) => void }) {
         }}
       />
 
+      {/* Message area */}
       <div style={{ background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.16)", borderRadius: "18px", backdropFilter: "blur(14px)", overflow: "hidden" }}>
-        <div className="flex gap-2 px-4 pt-4 pb-3" style={{ overflowX: "auto", scrollbarWidth: "none" }}>
-          {QUICK.map((q) => (
+        {/* Suggestions title + type selector */}
+        <div className="flex flex-col gap-2 px-4 pt-3 pb-1">
+          <span className="text-[9.5px] uppercase tracking-[0.18em] text-cc-off/20">Suggestions</span>
+          <div className="flex items-center gap-1.5" style={{ overflowX: "auto", scrollbarWidth: "none" }}>
+            {MESSAGE_TYPES.map(({ key, label }, i) => (
+              <span key={key} className="flex items-center gap-1.5 shrink-0">
+                {i > 0 && <span className="text-cc-off/15 text-[9px]">·</span>}
+                <button
+                  onClick={() => selectType(key)}
+                  className="text-[9.5px] uppercase tracking-[0.12em] transition-colors shrink-0"
+                  style={{ color: type === key ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.25)" }}
+                >
+                  {label}
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="flex gap-2 px-4 pt-2 pb-3" style={{ overflowX: "auto", scrollbarWidth: "none" }}>
+          {QUICK[type].map((q) => (
             <button
               key={q}
               onClick={() => setMsg(msg === q ? "" : q)}
@@ -341,11 +434,25 @@ function NewMessageTab({ onSent }: { onSent: (t: Thread) => void }) {
         <textarea
           value={msg}
           onChange={(e) => setMsg(e.target.value)}
-          placeholder="Or write your own — something kind, from one human to another..."
+          placeholder="Write whatever you feel..."
           rows={5}
           className="w-full bg-transparent text-cc-off placeholder:text-cc-off/20 text-[14px] leading-[1.75] p-4 resize-none focus:outline-none font-light"
         />
       </div>
+
+      {/* Optional email */}
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Your email — optional, so they can reply"
+        className="w-full bg-transparent text-cc-off/70 placeholder:text-cc-off/20 px-4 py-3 text-[13px] focus:outline-none font-light"
+        style={{
+          background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          borderRadius: "12px",
+        }}
+      />
 
       <button
         onClick={send}

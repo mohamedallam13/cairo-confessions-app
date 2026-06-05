@@ -1,18 +1,19 @@
 import { createServerFn } from "@tanstack/react-start";
 
 export interface SubmitPayload {
-  refNum:   string;
-  anonId:   string;
-  mood:     string;
-  gender:   string;
-  age:      number;
-  location: string;
-  email:    string;
-  body:     string;
-  category: string;
-  tags:     string[];
-  browser:  string;
-  device:   string;
+  refNum:      string;
+  anonId:      string;
+  mood:        string;
+  gender:      string;
+  age:         number;
+  location:    string;
+  email:       string;
+  body:        string;
+  category:    string;
+  tags:        string[];
+  browser:     string;
+  device:      string;
+  contactable: boolean;
 }
 
 export type SubmitResult =
