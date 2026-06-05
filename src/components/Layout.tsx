@@ -479,19 +479,6 @@ export default function Layout() {
 
             {/* Confess — center */}
             <div className="relative flex items-center justify-center">
-              <AnimatePresence>
-                {pathname === "/confess-here" && (
-                  <motion.div
-                    layoutId="pill-indicator"
-                    className="absolute inset-0 rounded-full"
-                    style={{ background: "rgba(var(--phase-accent-rgb,4,201,244),0.13)" }}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, y: -48 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                  />
-                )}
-              </AnimatePresence>
               <Link
                 to="/confess-here"
                 className="relative z-10 flex items-center justify-center w-[64px] h-[64px] active:scale-95 transition-transform"
