@@ -1239,7 +1239,7 @@ function NotificationsToggle({ anonId }: { anonId: string }) {
           ? <Bell size={13} strokeWidth={1.8} />
           : <BellOff size={13} strokeWidth={1.8} />}
         <span className="text-[10.5px] uppercase tracking-[0.16em]">
-          {loading ? "…" : enabled ? "Hourly reminders on" : "Enable hourly reminders"}
+          {loading ? "…" : enabled ? "Notifications on" : "Enable notifications"}
         </span>
       </div>
       <div
