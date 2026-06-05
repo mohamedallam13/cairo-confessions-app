@@ -549,7 +549,7 @@ export default function Layout() {
                     <motion.div
                       layoutId="pill-indicator"
                       className="absolute"
-                      style={{ inset: "-6px -8px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "16px 24px 24px 16px" /* rightmost — right corners anchor to nav curve */ }}
+                      style={{ inset: "-6px -8px", background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.13)", borderRadius: "9999px 14px 14px 9999px" /* rightmost — left round, right tight against nav edge */ }}
                       initial={{ opacity: 0, y: 0 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -48 }}
