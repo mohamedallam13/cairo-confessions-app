@@ -151,6 +151,7 @@ export interface StatusCacheEntry {
   snippet: string;
   confessionTimestamp: string;
   lastPolled: string; // ISO timestamp of last successful poll
+  messages?: unknown[];
 }
 
 /** Writes/updates the status cache for a ref after a successful poll. */
@@ -250,7 +251,7 @@ export function removeRefFromProfile(refNum: string): void {
 
 /** Clears all CC identity data from localStorage. */
 export function resetIdentity(): void {
-  [KEY_ANON_ID, KEY_MY_REFS, KEY_INGESTING, KEY_INGESTION_FAILED, KEY_SNIPPETS, KEY_CARD_CACHE, KEY_STATUS_CACHE, KEY_ORIGIN_BROWSER, "cc_identity_introduced"].forEach((k) => localStorage.removeItem(k));
+  [KEY_ANON_ID, KEY_MY_REFS, KEY_INGESTING, KEY_INGESTION_FAILED, KEY_SNIPPETS, KEY_CARD_CACHE, KEY_STATUS_CACHE, KEY_ORIGIN_BROWSER, "cc_identity_introduced", "cc_reach_threads", "cc_reach_thread_seen"].forEach((k) => localStorage.removeItem(k));
   dispatchIngestingChange();
   window.dispatchEvent(new CustomEvent("cc:identity-reset"));
 }

@@ -6,12 +6,23 @@ interface StatusObj {
   rejectionReasons?: string;
 }
 
+export interface ConfessorMessage {
+  conversationRef: string;
+  confessionSerialNum: number;
+  messageType: string;
+  message: string;
+  senderEmail?: string;
+  senderAnonId?: string;
+  timestamp: string;
+  responseId: string;
+}
+
 interface TrackingFileEntry {
   serialNum?: string;
   status: StatusObj[];
   confessionsArray: Array<{ confession: string; timestamp: string; refNum?: string }>;
   link?: string;
-  confessorMessagesArray?: Array<Record<string, unknown>>;
+  confessorMessagesArray?: Array<ConfessorMessage>;
   anonIds?: Array<{ id: string; timestamp: string }>;
 }
 
@@ -20,7 +31,7 @@ export interface ResolvedEntry {
   status: StatusObj[];
   confessionsArray: Array<{ confession: string; timestamp: string }>;
   link?: string;
-  messageCount: number;
+  messages: ConfessorMessage[];
   anonIds: Array<{ id: string; timestamp: string }>;
 }
 
@@ -61,7 +72,7 @@ export const pollTrackingStatuses = createServerFn({ method: "POST" })
         status: d.status,
         confessionsArray: d.confessionsArray ?? [],
         link: d.link,
-        messageCount: d.confessorMessagesArray?.length ?? 0,
+        messages: d.confessorMessagesArray ?? [],
         anonIds: d.anonIds ?? [],
       };
     }

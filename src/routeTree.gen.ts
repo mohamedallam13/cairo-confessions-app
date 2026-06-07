@@ -13,6 +13,8 @@ import { Route as TrackRouteImport } from './routes/track'
 import { Route as ReachRouteImport } from './routes/reach'
 import { Route as PushTestRouteImport } from './routes/push-test'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as HomeRouteImport } from './routes/home'
+import { Route as EventsRouteImport } from './routes/events'
 import { Route as ConfessHereRouteImport } from './routes/confess-here'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -36,6 +38,16 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsRoute = EventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConfessHereRoute = ConfessHereRouteImport.update({
   id: '/confess-here',
   path: '/confess-here',
@@ -50,6 +62,8 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/confess-here': typeof ConfessHereRoute
+  '/events': typeof EventsRoute
+  '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/push-test': typeof PushTestRoute
   '/reach': typeof ReachRoute
@@ -58,6 +72,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/confess-here': typeof ConfessHereRoute
+  '/events': typeof EventsRoute
+  '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/push-test': typeof PushTestRoute
   '/reach': typeof ReachRoute
@@ -67,6 +83,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/confess-here': typeof ConfessHereRoute
+  '/events': typeof EventsRoute
+  '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/push-test': typeof PushTestRoute
   '/reach': typeof ReachRoute
@@ -77,16 +95,28 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/confess-here'
+    | '/events'
+    | '/home'
     | '/login'
     | '/push-test'
     | '/reach'
     | '/track'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/confess-here' | '/login' | '/push-test' | '/reach' | '/track'
+  to:
+    | '/'
+    | '/confess-here'
+    | '/events'
+    | '/home'
+    | '/login'
+    | '/push-test'
+    | '/reach'
+    | '/track'
   id:
     | '__root__'
     | '/'
     | '/confess-here'
+    | '/events'
+    | '/home'
     | '/login'
     | '/push-test'
     | '/reach'
@@ -96,6 +126,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConfessHereRoute: typeof ConfessHereRoute
+  EventsRoute: typeof EventsRoute
+  HomeRoute: typeof HomeRoute
   LoginRoute: typeof LoginRoute
   PushTestRoute: typeof PushTestRoute
   ReachRoute: typeof ReachRoute
@@ -132,6 +164,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/events': {
+      id: '/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof EventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/confess-here': {
       id: '/confess-here'
       path: '/confess-here'
@@ -152,6 +198,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConfessHereRoute: ConfessHereRoute,
+  EventsRoute: EventsRoute,
+  HomeRoute: HomeRoute,
   LoginRoute: LoginRoute,
   PushTestRoute: PushTestRoute,
   ReachRoute: ReachRoute,
