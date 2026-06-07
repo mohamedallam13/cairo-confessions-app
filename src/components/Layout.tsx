@@ -287,7 +287,8 @@ export default function Layout() {
       const stillUnread = threads.some((t) => {
         const perspective = t.anonId === anonId ? "sender" : "confessor";
         const others = t.messages.filter((m) => m.from !== perspective);
-        if (others.length === 0) return false;
+        const lastMsgSentAt = t.messages[t.messages.length - 1]?.sentAt ?? "";
+        if (others.length === 0 && t.lastActivity <= lastMsgSentAt) return false;
         const threadSeen = seen[t.id];
         return !threadSeen || t.lastActivity > threadSeen;
       });
@@ -325,7 +326,8 @@ export default function Layout() {
         const hasNew = threads.some((t) => {
           const otherRole = t.senderAnonId === anonId ? "confessor" : "sender";
           const otherMsgs = t.messages.filter((m) => m.fromRole === otherRole);
-          if (otherMsgs.length === 0) return false;
+          const lastMsgSentAt = t.messages[t.messages.length - 1]?.sentAt ?? "";
+          if (otherMsgs.length === 0 && t.lastActivity <= lastMsgSentAt) return false;
           const threadSeen = seen[t.id];
           return !threadSeen || t.lastActivity > threadSeen;
         });

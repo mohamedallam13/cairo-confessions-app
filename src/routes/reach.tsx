@@ -135,7 +135,9 @@ function getThreadSeen(threadId: string): string | null {
 function isThreadUnread(thread: Thread, myAnonId: string): boolean {
   const perspective: Sender = thread.anonId === myAnonId ? "sender" : "confessor";
   const otherMsgs = thread.messages.filter((m) => m.from !== perspective);
-  if (otherMsgs.length === 0) return false;
+  const lastMsgSentAt = thread.messages[thread.messages.length - 1]?.sentAt ?? "";
+  const hasOtherActivity = otherMsgs.length > 0 || thread.lastActivity > lastMsgSentAt;
+  if (!hasOtherActivity) return false;
   const seen = getThreadSeen(thread.id);
   return !seen || thread.lastActivity > seen;
 }
@@ -811,6 +813,10 @@ function InboxTab({ threads, myAnonId, onOpen }: {
         const unread = isThreadUnread(t, myAnonId);
         const last = t.messages[t.messages.length - 1];
         const lastFrom = last ? (last.from === perspective ? "You" : "Them") : null;
+        const isReactionActivity = last && t.lastActivity > last.sentAt;
+        const reactionEmojis = isReactionActivity
+          ? [...new Set(t.messages.flatMap((m) => Object.keys(m.reactions ?? {})))].slice(0, 3).join(" ")
+          : null;
 
         return (
           <button
@@ -868,12 +874,23 @@ function InboxTab({ threads, myAnonId, onOpen }: {
                   className={`text-[12px] truncate ${unread ? "font-normal" : "font-light"}`}
                   style={{ color: unread ? "rgba(242,242,242,0.95)" : "rgba(242,242,242,0.68)", fontWeight: unread ? 600 : 300 }}
                 >
-                  {lastFrom && (
-                    <span style={{ color: unread ? "rgba(242,242,242,0.68)" : "rgba(242,242,242,0.45)" }}>
-                      {lastFrom}:{" "}
-                    </span>
+                  {isReactionActivity ? (
+                    <>
+                      <span style={{ color: unread ? "rgba(242,242,242,0.68)" : "rgba(242,242,242,0.45)" }}>
+                        {reactionEmojis || "·"} to:{" "}
+                      </span>
+                      {last?.content.slice(0, 40)}
+                    </>
+                  ) : (
+                    <>
+                      {lastFrom && (
+                        <span style={{ color: unread ? "rgba(242,242,242,0.68)" : "rgba(242,242,242,0.45)" }}>
+                          {lastFrom}:{" "}
+                        </span>
+                      )}
+                      {last?.content}
+                    </>
                   )}
-                  {last?.content}
                 </p>
                 {unread && (
                   <div
