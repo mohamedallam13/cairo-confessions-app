@@ -276,16 +276,15 @@ export default function Layout() {
     setReachUnread(false);
   }, [pathname]);
 
-  // Re-check immediately when any thread is marked seen — clears dot if all unread are resolved
+  // Re-check immediately when a thread is opened — clears dot if all are now read
   useEffect(() => {
     function onThreadSeen() {
       const anonId = getOrCreateAnonId();
       const threads = JSON.parse(localStorage.getItem("cc_reach_threads") ?? "[]") as Array<{
         id: string; anonId: string; lastActivity: string;
-        messages: Array<{ id: string; from: string; sentAt: string }>;
+        messages: Array<{ from: string; sentAt: string }>;
       }>;
-      const seen: Record<string, { msgId: string | null; activity: string }> =
-        JSON.parse(localStorage.getItem("cc_reach_thread_seen_v2") ?? "{}");
+      const seen: Record<string, string> = JSON.parse(localStorage.getItem("cc_reach_thread_seen") ?? "{}");
       const stillUnread = threads.some((t) => {
         const perspective = t.anonId === anonId ? "sender" : "confessor";
         const others = t.messages.filter((m) => m.from !== perspective);
@@ -294,9 +293,8 @@ export default function Layout() {
         if (others.length === 0 && !hasReactionActivity) return false;
         const s = seen[t.id];
         if (!s) return true;
-        if (others.length > 0 && others[others.length - 1].id !== s.msgId) return true;
-        if (hasReactionActivity && t.lastActivity > s.activity) return true;
-        return false;
+        const lastOtherSentAt = others[others.length - 1]?.sentAt ?? "";
+        return lastOtherSentAt > s || t.lastActivity > s;
       });
       if (!stillUnread) setReachUnread(false);
     }
@@ -311,11 +309,21 @@ export default function Layout() {
         const anonId = getOrCreateAnonId();
         if (!anonId) return;
         const threads = await (getThreads as unknown as (o: { data: { anonId: string } }) => Promise<RemoteThread[]>)({ data: { anonId } } as never);
-        const seen: Record<string, { msgId: string | null; activity: string }> =
-          JSON.parse(localStorage.getItem("cc_reach_thread_seen_v2") ?? "{}");
+        const seen: Record<string, string> = JSON.parse(localStorage.getItem("cc_reach_thread_seen") ?? "{}");
 
-        // No seeding — cursor only advances when the user opens a thread.
-        // Unread = other-party message cursor moved OR reaction activity past what we've seen
+        // One-time seed: only runs if the key has NEVER been written (first ever load).
+        // Sets all existing threads as "seen right now" so old history doesn't trigger the dot.
+        // After this, cursor ONLY advances when user opens a thread.
+        if (localStorage.getItem("cc_reach_thread_seen") === null) {
+          const now = new Date().toISOString();
+          const seed: Record<string, string> = {};
+          threads.forEach((t) => { seed[t.id] = now; });
+          localStorage.setItem("cc_reach_thread_seen", JSON.stringify(seed));
+          setReachUnread(false);
+          return;
+        }
+
+        // Unread: other-party message OR reaction arrived after thread was last opened
         const hasNew = threads.some((t) => {
           const otherRole = t.senderAnonId === anonId ? "confessor" : "sender";
           const otherMsgs = t.messages.filter((m) => m.fromRole === otherRole);
@@ -324,9 +332,8 @@ export default function Layout() {
           if (otherMsgs.length === 0 && !hasReactionActivity) return false;
           const s = seen[t.id];
           if (!s) return true;
-          if (otherMsgs.length > 0 && otherMsgs[otherMsgs.length - 1].id !== s.msgId) return true;
-          if (hasReactionActivity && t.lastActivity > s.activity) return true;
-          return false;
+          const lastOtherSentAt = otherMsgs[otherMsgs.length - 1]?.sentAt ?? "";
+          return lastOtherSentAt > s || t.lastActivity > s;
         });
         setReachUnread(hasNew);
       } catch {}
