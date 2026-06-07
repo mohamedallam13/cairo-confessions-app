@@ -136,9 +136,8 @@ function isThreadUnread(thread: Thread, myAnonId: string): boolean {
   const perspective: Sender = thread.anonId === myAnonId ? "sender" : "confessor";
   const otherMsgs = thread.messages.filter((m) => m.from !== perspective);
   if (otherMsgs.length === 0) return false;
-  const lastOther = otherMsgs[otherMsgs.length - 1];
   const seen = getThreadSeen(thread.id);
-  return !seen || lastOther.sentAt > seen;
+  return !seen || thread.lastActivity > seen;
 }
 
 // ─── Quick messages ────────────────────────────────────────────────────────────
@@ -246,12 +245,12 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
     });
   }
 
-  // Mark thread seen in real-time while viewing — covers messages arriving via 15s poll
+  // Mark thread seen in real-time while viewing — covers messages and reactions arriving via 15s poll
   useEffect(() => {
     const otherMsgs = thread.messages.filter((m) => m.from !== perspective);
     if (otherMsgs.length === 0) return;
-    markThreadSeen(thread.id, otherMsgs[otherMsgs.length - 1].sentAt);
-  }, [thread.messages]);
+    markThreadSeen(thread.id, new Date().toISOString());
+  }, [thread.messages, thread.lastActivity]);
 
   // Fire-and-forget: set confessor_anon_id when confessor opens thread (before replying)
   useEffect(() => {
@@ -431,7 +430,7 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
               messages: thread.messages.map((msg) => msg.id === m.id ? { ...msg, reactions: updated } : msg),
             });
             (reactToMessage as unknown as (o: { data: unknown }) => Promise<unknown>)(
-              { data: { messageId: m.id, emoji, anonId: myAnonId } } as never
+              { data: { messageId: m.id, threadId: thread.id, emoji, anonId: myAnonId } } as never
             ).catch(() => {});
           }
 
@@ -1029,21 +1028,13 @@ function ReachPage() {
   }
 
   function handleOpen(thread: Thread) {
-    // Mark seen immediately so inbox updates before the thread view mounts
-    const perspective: Sender = thread.anonId === myAnonId ? "sender" : "confessor";
-    const otherMsgs = thread.messages.filter((m) => m.from !== perspective);
-    if (otherMsgs.length > 0) markThreadSeen(thread.id, otherMsgs[otherMsgs.length - 1].sentAt);
+    markThreadSeen(thread.id, new Date().toISOString());
     setActiveThread(thread);
     navigate({ to: "/reach", search: CLEAR_SEARCH });
   }
 
   function handleBack() {
-    // Mark seen on close too — catches any replies that came in while viewing
-    if (activeThread) {
-      const perspective: Sender = activeThread.anonId === myAnonId ? "sender" : "confessor";
-      const otherMsgs = activeThread.messages.filter((m) => m.from !== perspective);
-      if (otherMsgs.length > 0) markThreadSeen(activeThread.id, otherMsgs[otherMsgs.length - 1].sentAt);
-    }
+    if (activeThread) markThreadSeen(activeThread.id, new Date().toISOString());
     setActiveThread(null);
   }
 

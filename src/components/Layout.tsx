@@ -281,16 +281,15 @@ export default function Layout() {
     function onThreadSeen() {
       const anonId = getOrCreateAnonId();
       const threads = JSON.parse(localStorage.getItem("cc_reach_threads") ?? "[]") as Array<{
-        id: string; anonId: string; messages: Array<{ from: string; sentAt: string }>;
+        id: string; anonId: string; lastActivity: string; messages: Array<{ from: string; sentAt: string }>;
       }>;
       const seen: Record<string, string> = JSON.parse(localStorage.getItem("cc_reach_thread_seen") ?? "{}");
       const stillUnread = threads.some((t) => {
         const perspective = t.anonId === anonId ? "sender" : "confessor";
         const others = t.messages.filter((m) => m.from !== perspective);
         if (others.length === 0) return false;
-        const lastOther = others[others.length - 1];
         const threadSeen = seen[t.id];
-        return !threadSeen || lastOther.sentAt > threadSeen;
+        return !threadSeen || t.lastActivity > threadSeen;
       });
       if (!stillUnread) setReachUnread(false);
     }
@@ -314,22 +313,21 @@ export default function Layout() {
         threads.forEach((t) => {
           if (seen[t.id]) return;
           const otherRole = t.senderAnonId === anonId ? "confessor" : "sender";
-          const otherMsgs = t.messages.filter((m) => m.fromRole === otherRole);
-          if (otherMsgs.length > 0) {
-            seen[t.id] = otherMsgs[otherMsgs.length - 1].sentAt;
+          const hasOtherMsgs = t.messages.some((m) => m.fromRole === otherRole);
+          if (hasOtherMsgs) {
+            seen[t.id] = t.lastActivity;
             seedChanged = true;
           }
         });
         if (seedChanged) localStorage.setItem("cc_reach_thread_seen", JSON.stringify(seen));
 
-        // Check for genuinely new messages (arrived after the thread was last seen)
+        // Check for new messages or reactions (arrived after thread was last seen)
         const hasNew = threads.some((t) => {
           const otherRole = t.senderAnonId === anonId ? "confessor" : "sender";
           const otherMsgs = t.messages.filter((m) => m.fromRole === otherRole);
           if (otherMsgs.length === 0) return false;
-          const lastOther = otherMsgs[otherMsgs.length - 1];
           const threadSeen = seen[t.id];
-          return !threadSeen || lastOther.sentAt > threadSeen;
+          return !threadSeen || t.lastActivity > threadSeen;
         });
         setReachUnread(hasNew);
       } catch {}

@@ -289,8 +289,9 @@ export const deleteThread = createServerFn({ method: "POST" })
 // Toggles an emoji reaction on a message — adds if not present, removes if already reacted
 export const reactToMessage = createServerFn({ method: "POST" })
   .handler(async (ctx): Promise<{ success: true; reactions: Record<string, string[]> } | { success: false; error: string }> => {
-    const { messageId, emoji, anonId } = ctx.data as unknown as {
+    const { messageId, threadId, emoji, anonId } = ctx.data as unknown as {
       messageId: string;
+      threadId: string;
       emoji: string;
       anonId: string;
     };
@@ -319,6 +320,13 @@ export const reactToMessage = createServerFn({ method: "POST" })
       body: JSON.stringify({ reactions }),
     });
     if (!patchRes.ok) return { success: false, error: await patchRes.text() };
+
+    // Update thread last_activity so the other party sees a notification
+    await fetch(supabaseUrl(`cc_threads?id=eq.${threadId}`), {
+      method: "PATCH",
+      headers: { ...headers, "Prefer": "return=minimal" },
+      body: JSON.stringify({ last_activity: new Date().toISOString() }),
+    });
 
     return { success: true, reactions };
   });
