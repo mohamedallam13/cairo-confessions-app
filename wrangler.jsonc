@@ -8,6 +8,7 @@
     "directory": "dist/client"
   },
   "no_bundle": false,
+  "vars": {},
   "kv_namespaces": [
     {
       "binding": "PUSH_SUBS",

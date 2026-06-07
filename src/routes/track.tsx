@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, Heart, MessageCircle, Clock, ExternalLink, X, Reply, Check, ChevronRight, ChevronLeft, Copy, ArrowRightLeft, Download, Bell, BellOff } from "lucide-react";
 import { fieldWithPadding } from "../lib/fieldStyles";
 import { getOrCreateAnonId, getMyRefs, saveRefToProfile, isIngesting as checkIngesting, getIngestingRefs, getIngestionFailedRefs, getSnippet, saveSnippet, saveCardCache, getCardCache, getStatusCache, saveStatusCache, getAllStatusCache, getLastPolled, resetIdentity, clearIngestionFailed, clearIngesting, adoptSession, detectBrowser, getOriginBrowser, getBrowserDetails } from "../lib/anonIdentity";
-import { pollTrackingStatuses, addAnonId, type ResolvedEntry } from "../lib/fetchTracking";
+import { pollTrackingStatuses, addAnonId, type ResolvedEntry, type ConfessorMessage } from "../lib/fetchTracking";
 import { cancelConfession } from "../lib/cancelConfession";
 import { createRecoveryToken, redeemRecoveryToken } from "../lib/recoveryToken";
 import { subscribePush, unsubscribePush } from "../lib/pushNotifications";
@@ -37,15 +37,6 @@ interface Confession {
   timestamp: string;
 }
 
-interface IncomingMessage {
-  id: string;
-  time: string;
-  body: string;
-  anonId?: string;           // sender's anon ID — used to route reply back
-  replied?: boolean;
-  replyText?: string;
-}
-
 interface TrackResult {
   serialNum: string;
   status: StatusEntry[];       // newest-first
@@ -53,8 +44,7 @@ interface TrackResult {
   ingestionFailed?: boolean;   // sheet write succeeded, pipeline threw — self-heals on next poll
   link?: string;
   confessionsArray: Confession[];
-  hearts: number;
-  messages: IncomingMessage[];
+  messages: ConfessorMessage[];
 }
 
 // ─── Timeline ─────────────────────────────────────────────────────────────────
@@ -98,11 +88,7 @@ const DEMO: Record<string, TrackResult> = {
     confessionsArray: [
       { confession: "I drive past her balcony in Zamalek every Friday. She's been gone two years. I know I should stop. I don't want to.", timestamp: new Date(Date.now() - 14400000).toISOString() },
     ],
-    hearts: 142,
-    messages: [
-      { id: "msg1", time: "2 days ago", body: "I read yours and felt less alone. Thank you for writing it.", anonId: "anon_demo1" },
-      { id: "msg2", time: "5 hours ago", body: "Sending you all the warmth I have today.", anonId: "anon_demo2" },
-    ],
+    messages: [],
   },
   "REJECTME": {
     serialNum: "1087",
@@ -114,7 +100,6 @@ const DEMO: Record<string, TrackResult> = {
     confessionsArray: [
       { confession: "Demo rejection case.", timestamp: new Date(Date.now() - 86400000).toISOString() },
     ],
-    hearts: 0,
     messages: [],
   },
   "CANCEL01": {
@@ -126,7 +111,6 @@ const DEMO: Record<string, TrackResult> = {
     confessionsArray: [
       { confession: "Demo pending case — you can cancel this one.", timestamp: new Date(Date.now() - 3600000).toISOString() },
     ],
-    hearts: 0,
     messages: [],
   },
   "INGEST01": {
@@ -136,7 +120,6 @@ const DEMO: Record<string, TrackResult> = {
     confessionsArray: [
       { confession: "Demo ingesting case — sheet write in progress.", timestamp: new Date().toISOString() },
     ],
-    hearts: 0,
     messages: [],
   },
 };
@@ -154,8 +137,7 @@ function resolvedEntryToTrackResult(entry: ResolvedEntry): TrackResult {
     status: statusArr,
     confessionsArray: entry.confessionsArray,
     link: entry.link,
-    hearts: 0,
-    messages: [],
+    messages: entry.messages ?? [],
   };
 }
 
@@ -176,48 +158,49 @@ function isValidInput(s: string) {
 
 // ─── Messages tab ────────────────────────────────────────────────────────────
 
-function MessageItem({ msg, confessionRef }: { msg: IncomingMessage; confessionRef: string }) {
+function MessageItem({ msg }: { msg: ConfessorMessage }) {
   const navigate = useNavigate();
-  const hasReplied = msg.replied ?? false;
+  const d = new Date(msg.timestamp);
+  const timeLabel = !isNaN(d.getTime())
+    ? d.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    : msg.timestamp;
 
   return (
     <div
-      style={{
-        ...fieldWithPadding,
-        padding: "16px 20px",
-        border: hasReplied
-          ? "1px solid rgba(var(--phase-accent-rgb,4,201,244),0.18)"
-          : "1px solid rgba(255,255,255,0.10)",
-      }}
+      style={{ ...fieldWithPadding, padding: "16px 20px", border: "1px solid rgba(255,255,255,0.10)" }}
       className="space-y-3"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5 text-cc-off/25 text-[10px] uppercase tracking-[0.14em]">
           <Clock size={10} strokeWidth={1.8} />
-          {msg.time}
+          {timeLabel}
         </div>
-        {hasReplied && (
-          <div className="flex items-center gap-1 text-[9.5px] uppercase tracking-[0.14em]" style={{ color: "var(--phase-accent,#04C9F4)" }}>
-            <Check size={10} strokeWidth={2.2} /> Replied
-          </div>
-        )}
+        <span
+          className="text-[9px] uppercase tracking-[0.14em] px-2 py-0.5 rounded-full"
+          style={{ background: "rgba(var(--phase-accent-rgb,4,201,244),0.08)", color: "rgba(var(--phase-accent-rgb,4,201,244),0.5)" }}
+        >
+          {msg.messageType}
+        </span>
       </div>
 
-      <p className="text-cc-off/60 text-[13px] leading-[1.7]">{msg.body}</p>
+      <p className="text-cc-off/60 text-[13px] leading-[1.7]">{msg.message}</p>
 
-      <button
-        onClick={() => navigate({ to: "/reach", search: { threadId: msg.id, ref: confessionRef, body: msg.body } })}
-        className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.14em] transition-colors hover:opacity-80"
-        style={{ color: "rgba(var(--phase-accent-rgb,4,201,244),0.7)" }}
-      >
-        <Reply size={12} strokeWidth={2} />
-        {hasReplied ? "Continue in Reach Out" : "Reply in Reach Out"}
-      </button>
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => navigate({ to: "/reach", search: { threadId: msg.conversationRef, ref: String(msg.confessionSerialNum), body: msg.message, new: undefined, serial: undefined } })}
+          className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.14em] transition-colors hover:opacity-80"
+          style={{ color: "rgba(var(--phase-accent-rgb,4,201,244),0.7)" }}
+        >
+          <Reply size={12} strokeWidth={2} />
+          Reply in Reach Out
+        </button>
+        <span className="text-[9px] text-cc-off/20 font-mono">{msg.conversationRef}</span>
+      </div>
     </div>
   );
 }
 
-function MessagesTab({ messages, confessionRef }: { messages: IncomingMessage[]; confessionRef: string }) {
+function MessagesTab({ messages }: { messages: ConfessorMessage[] }) {
   if (messages.length === 0) {
     return (
       <div className="text-center py-10 space-y-1.5">
@@ -229,7 +212,7 @@ function MessagesTab({ messages, confessionRef }: { messages: IncomingMessage[];
   }
   return (
     <div className="space-y-2.5">
-      {messages.map((msg) => <MessageItem key={msg.id} msg={msg} confessionRef={confessionRef} />)}
+      {[...messages].reverse().map((msg) => <MessageItem key={msg.conversationRef} msg={msg} />)}
     </div>
   );
 }
@@ -237,7 +220,7 @@ function MessagesTab({ messages, confessionRef }: { messages: IncomingMessage[];
 // ─── Component ────────────────────────────────────────────────────────────────
 
 function ResultView({
-  r, refNum, tab, setTab, latest, displayStep, progressPct, canCancel, confirmCancel, setConfirmCancel, doCancel, cancelLoading, cancelError, lastPolled,
+  r, refNum, tab, setTab, latest, displayStep, progressPct, canCancel, confirmCancel, setConfirmCancel, doCancel, cancelLoading, cancelError, lastPolled, onRefresh,
 }: {
   r: TrackResult;
   refNum: string;
@@ -253,7 +236,18 @@ function ResultView({
   cancelLoading: boolean;
   cancelError: string;
   lastPolled: string | null;
+  onRefresh: () => Promise<void>;
 }) {
+  const [refreshing, setRefreshing] = useState(false);
+  const [messagesSeen, setMessagesSeen] = useState(false);
+
+  async function handleRefresh() {
+    if (refreshing) return;
+    setRefreshing(true);
+    await onRefresh();
+    setRefreshing(false);
+  }
+
   const isIngesting = r.ingesting === true;
   const isIngestionFailed = r.ingestionFailed === true;
   const terminal = !isIngesting && !isIngestionFailed && r.status.length > 0 && isTerminal(r.status[0].status);
@@ -292,7 +286,7 @@ function ResultView({
           {(["status", "messages"] as const).map((t) => (
             <button
               key={t}
-              onClick={() => setTab(t)}
+              onClick={() => { setTab(t); if (t === "messages") setMessagesSeen(true); }}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] rounded-[10px] transition-all"
               style={{
                 background: tab === t ? "rgba(255,255,255,0.10)" : "transparent",
@@ -301,8 +295,11 @@ function ResultView({
             >
               {t === "messages" && r.messages.length > 0 && (
                 <span
-                  className="grid place-items-center w-4 h-4 rounded-full text-[9px] font-bold"
-                  style={{ background: "rgba(var(--phase-accent-rgb,4,201,244),0.25)", color: "var(--phase-accent,#04C9F4)" }}
+                  className="grid place-items-center w-4 h-4 rounded-full text-[9px] font-bold transition-all"
+                  style={messagesSeen
+                    ? { background: "rgba(255,255,255,0.08)", color: "rgba(242,242,242,0.25)" }
+                    : { background: "rgba(var(--phase-accent-rgb,4,201,244),0.25)", color: "var(--phase-accent,#04C9F4)" }
+                  }
                 >
                   {r.messages.length}
                 </span>
@@ -405,17 +402,29 @@ function ResultView({
               <p className="text-cc-off/30 text-[12px]">{STEPS[displayStep]?.note}</p>
             )}
 
-            {/* Last updated */}
-            {lastPolled && !isIngesting && !isIngestionFailed && (
-              <div
-                className="flex items-center gap-2 px-3 py-2 rounded-xl self-start"
+            {/* Last updated + refresh */}
+            {!isIngesting && !isIngestionFailed && (
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all active:scale-[0.99] disabled:opacity-50"
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
               >
-                <div className="w-1.5 h-1.5 rounded-full" style={{ background: "rgba(var(--phase-accent-rgb,4,201,244),0.5)" }} />
-                <span className="text-[11px] tracking-[0.08em] text-cc-off/45">
-                  Updated {formatLastUpdated(lastPolled)}
-                </span>
-              </div>
+                <div className="flex items-center gap-2">
+                  {refreshing
+                    ? <div className="w-1.5 h-1.5 rounded-full border border-cc-off/30 border-t-transparent animate-spin shrink-0" />
+                    : <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "rgba(var(--phase-accent-rgb,4,201,244),0.5)" }} />
+                  }
+                  <span className="text-[11px] tracking-[0.08em] text-cc-off/45">
+                    {refreshing ? "Checking…" : lastPolled ? `Updated ${formatLastUpdated(lastPolled)}` : "Not checked yet"}
+                  </span>
+                </div>
+                {!refreshing && (
+                  <span className="text-[10px] uppercase tracking-[0.14em] text-cc-off/25">
+                    Tap to refresh
+                  </span>
+                )}
+              </button>
             )}
 
             {/* Terminal badge + reason */}
@@ -476,9 +485,12 @@ function ResultView({
               <div className="flex items-end justify-between">
                 <div className="space-y-0.5">
                   <p className="text-[9px] uppercase tracking-[0.22em] text-cc-off/30">Confession number</p>
-                  <p className="font-display text-[1.8rem] tracking-[0.08em]" style={{ color: "var(--phase-accent,#04C9F4)" }}>
-                    #{r.serialNum}
-                  </p>
+                  <CopyableRef
+                    value={r.serialNum}
+                    display={`#${r.serialNum}`}
+                    className="font-display text-[1.8rem] tracking-[0.08em] block"
+                    style={{ color: "var(--phase-accent,#04C9F4)" }}
+                  />
                 </div>
                 <p className="text-cc-off/30 text-[11px] leading-relaxed text-right max-w-[140px]">
                   The public number on the post.
@@ -490,9 +502,11 @@ function ResultView({
               <div className="flex items-end justify-between">
                 <div className="space-y-0.5">
                   <p className="text-[9px] uppercase tracking-[0.22em] text-cc-off/25">Your reference key</p>
-                  <p className="font-display text-[1rem] tracking-[0.14em] text-cc-off/55">
-                    {refNum}
-                  </p>
+                  <CopyableRef
+                    value={refNum}
+                    display={refNum}
+                    className="font-display text-[1rem] tracking-[0.14em] text-cc-off/55 block"
+                  />
                 </div>
                 <p className="text-cc-off/20 text-[10.5px] leading-relaxed text-right max-w-[140px]">
                   Private. Only you have this.
@@ -529,10 +543,9 @@ function ResultView({
                   </p>
                 </div>
               ))}
-              {r.hearts > 0 && (
+              {false && (
                 <div className="flex items-center gap-1.5 text-cc-off/30 text-[12px]">
                   <Heart size={11} strokeWidth={1.8} />
-                  {r.hearts}
                 </div>
               )}
             </div>
@@ -595,10 +608,40 @@ function ResultView({
 
       {/* ── Messages tab ── */}
       {!isIngesting && tab === "messages" && (
-        <MessagesTab messages={r.messages} confessionRef={r.serialNum} />
+        <MessagesTab messages={r.messages} />
       )}
 
     </div>
+  );
+}
+
+// ─── Copyable ref ─────────────────────────────────────────────────────────────
+
+function CopyableRef({ value, display, className, style }: {
+  value: string;
+  display: string;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  function copy(e: React.MouseEvent) {
+    e.stopPropagation();
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  return (
+    <span
+      onClick={copy}
+      className={`cursor-pointer select-none transition-colors ${className ?? ""}`}
+      style={copied ? { ...style, opacity: 0.5 } : style}
+      title={`Tap to copy: ${value}`}
+    >
+      {copied ? "Copied" : display}
+    </span>
   );
 }
 
@@ -654,12 +697,12 @@ function ConfessionCard({ refNum, result, onOpen }: { refNum: string; result: Tr
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2.5">
-            <span
+            <CopyableRef
+              value={refNum}
+              display={refNum}
               className="font-display text-[11px] uppercase tracking-[0.22em]"
               style={{ color: "var(--phase-accent,#04C9F4)" }}
-            >
-              {refNum}
-            </span>
+            />
             <div className="flex items-center gap-1.5">
               <StatusBadge status={latestStatus} />
               {ingesting && (
@@ -671,9 +714,11 @@ function ConfessionCard({ refNum, result, onOpen }: { refNum: string; result: Tr
             </div>
           </div>
           {serialNum && (
-            <span className="font-display text-[15px] tracking-[0.06em] text-cc-off/70">
-              #{serialNum}
-            </span>
+            <CopyableRef
+              value={serialNum}
+              display={`#${serialNum}`}
+              className="font-display text-[15px] tracking-[0.06em] text-cc-off/70"
+            />
           )}
         </div>
         <ChevronRight size={14} strokeWidth={1.8} className="text-cc-off/20 mt-0.5" />
@@ -1341,6 +1386,7 @@ function TrackPage() {
           snippet,
           confessionTimestamp,
           lastPolled: polledAt,
+          messages: entry.messages,
         });
       }
       return next;
@@ -1376,8 +1422,7 @@ function TrackPage() {
                 ? entry.statuses.map((s) => ({ status: s.status as StatusKey, timestamp: s.timestamp, rejectionReasons: Array.isArray(s.rejectionReasons) ? s.rejectionReasons.join(", ") : s.rejectionReasons as string | undefined }))
                 : [{ status: "pending" as StatusKey, timestamp: entry.confessionTimestamp || new Date().toISOString() }],
               confessionsArray: entry.snippet ? [{ confession: entry.snippet, timestamp: entry.confessionTimestamp } as never] : [],
-              hearts: 0,
-              messages: [],
+              messages: (entry.messages ?? []) as ConfessorMessage[],
             };
           }
         }
@@ -1403,8 +1448,7 @@ function TrackPage() {
             ingesting: false,
             status: [{ status: "pending", timestamp: new Date().toISOString() }],
             confessionsArray: [],
-            hearts: 0,
-            messages: [],
+                        messages: [],
           });
         }
         return cur;
@@ -1438,7 +1482,7 @@ function TrackPage() {
     const failed = failedRefs.includes(ref);
     if (failed) {
       setActiveRef(ref);
-      setResult({ serialNum: "", ingestionFailed: true, status: [], confessionsArray: [], hearts: 0, messages: [] });
+      setResult({ serialNum: "", ingestionFailed: true, status: [], confessionsArray: [], messages: [] });
       setConfirmCancel(false);
       setCanceled(false);
       setTab("status");
@@ -1448,7 +1492,7 @@ function TrackPage() {
     const ingesting = checkIngesting(ref);
     if (ingesting || (pollingRefs.has(ref) && !resolvedResults[ref])) {
       setActiveRef(ref);
-      setResult({ serialNum: "", ingesting: true, status: [], confessionsArray: [], hearts: 0, messages: [] });
+      setResult({ serialNum: "", ingesting: true, status: [], confessionsArray: [], messages: [] });
       setConfirmCancel(false);
       setCanceled(false);
       setTab("status");
@@ -1458,8 +1502,7 @@ function TrackPage() {
       serialNum: "",
       status: [{ status: "pending" as const, timestamp: new Date().toISOString() }],
       confessionsArray: [],
-      hearts: 0,
-      messages: [],
+            messages: [],
     };
     setActiveRef(ref);
     setResult(found);
@@ -1639,6 +1682,7 @@ function TrackPage() {
             cancelLoading={cancelLoading}
             cancelError={cancelError}
             lastPolled={getStatusCache(activeRef)?.lastPolled ?? null}
+            onRefresh={runPoll}
           />
         )}
       </div>
@@ -1683,12 +1727,12 @@ function TrackPage() {
               key={ref}
               refNum={ref}
               result={ingestingRefs.includes(ref)
-                ? { serialNum: "", ingesting: true, status: [], confessionsArray: [], hearts: 0, messages: [] }
+                ? { serialNum: "", ingesting: true, status: [], confessionsArray: [], messages: [] }
                 : failedRefs.includes(ref)
-                ? { serialNum: "", ingestionFailed: true, status: [], confessionsArray: [], hearts: 0, messages: [] }
+                ? { serialNum: "", ingestionFailed: true, status: [], confessionsArray: [], messages: [] }
                 : (pollingRefs.has(ref) && !resolvedResults[ref])
-                ? { serialNum: "", ingesting: true, status: [], confessionsArray: [], hearts: 0, messages: [] }
-                : (DEMO[ref] ?? resolvedResults[ref] ?? { serialNum: "", status: [{ status: "pending" as const, timestamp: "" }], confessionsArray: [], hearts: 0, messages: [] })}
+                ? { serialNum: "", ingesting: true, status: [], confessionsArray: [], messages: [] }
+                : (DEMO[ref] ?? resolvedResults[ref] ?? { serialNum: "", status: [{ status: "pending" as const, timestamp: "" }], confessionsArray: [], messages: [] })}
               onOpen={() => openRef(ref)}
             />
           ))}

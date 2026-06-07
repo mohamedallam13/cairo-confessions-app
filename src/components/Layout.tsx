@@ -3,6 +3,8 @@ import type React from "react";
 import { Link, Outlet, useLocation, useRouter } from "@tanstack/react-router";
 import { House, Mail, ChevronLeft, Newspaper, CalendarDays } from "lucide-react";
 import { getIngestingRefs, getOrCreateAnonId, detectBrowser, getMyRefs } from "../lib/anonIdentity";
+import { getThreads } from "../lib/reachOut";
+import type { RemoteThread } from "../lib/reachOut";
 import { PHASES, type Phase, getPhaseOverride, setPhaseOverride } from "../hooks/useTimePhase";
 
 // ─── Identity reveal modal ───────────────────────────────────────────────────
@@ -266,6 +268,76 @@ export default function Layout() {
   const isTopLevel = TOP_LEVEL.has(pathname);
   const { phase, tokens } = useTimePhase(searchStr);
   const [hasIngesting, setHasIngesting] = useState(false);
+  const [reachUnread, setReachUnread] = useState(false);
+
+  // Clear unread dot when entering /reach
+  useEffect(() => {
+    if (pathname !== "/reach") return;
+    setReachUnread(false);
+  }, [pathname]);
+
+  // Re-check immediately when any thread is marked seen — clears dot if all unread are resolved
+  useEffect(() => {
+    function onThreadSeen() {
+      const anonId = getOrCreateAnonId();
+      const threads = JSON.parse(localStorage.getItem("cc_reach_threads") ?? "[]") as Array<{
+        id: string; anonId: string; messages: Array<{ from: string; sentAt: string }>;
+      }>;
+      const seen: Record<string, string> = JSON.parse(localStorage.getItem("cc_reach_thread_seen") ?? "{}");
+      const stillUnread = threads.some((t) => {
+        const perspective = t.anonId === anonId ? "sender" : "confessor";
+        const others = t.messages.filter((m) => m.from !== perspective);
+        if (others.length === 0) return false;
+        const lastOther = others[others.length - 1];
+        const threadSeen = seen[t.id];
+        return !threadSeen || lastOther.sentAt > threadSeen;
+      });
+      if (!stillUnread) setReachUnread(false);
+    }
+    window.addEventListener("cc:thread-seen", onThreadSeen);
+    return () => window.removeEventListener("cc:thread-seen", onThreadSeen);
+  }, []);
+
+  // Always-on 60s poll — drives the unread dot on the nav
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const anonId = getOrCreateAnonId();
+        if (!anonId) return;
+        const threads = await (getThreads as unknown as (o: { data: { anonId: string } }) => Promise<RemoteThread[]>)({ data: { anonId } } as never);
+        const seen: Record<string, string> = JSON.parse(localStorage.getItem("cc_reach_thread_seen") ?? "{}");
+
+        // One-time init: seed cc_reach_thread_seen for threads never opened before,
+        // using fresh Supabase data. This prevents old messages from permanently triggering
+        // the dot on first use. Only seeds threads with no existing entry — never overwrites.
+        let seedChanged = false;
+        threads.forEach((t) => {
+          if (seen[t.id]) return;
+          const otherRole = t.senderAnonId === anonId ? "confessor" : "sender";
+          const otherMsgs = t.messages.filter((m) => m.fromRole === otherRole);
+          if (otherMsgs.length > 0) {
+            seen[t.id] = otherMsgs[otherMsgs.length - 1].sentAt;
+            seedChanged = true;
+          }
+        });
+        if (seedChanged) localStorage.setItem("cc_reach_thread_seen", JSON.stringify(seen));
+
+        // Check for genuinely new messages (arrived after the thread was last seen)
+        const hasNew = threads.some((t) => {
+          const otherRole = t.senderAnonId === anonId ? "confessor" : "sender";
+          const otherMsgs = t.messages.filter((m) => m.fromRole === otherRole);
+          if (otherMsgs.length === 0) return false;
+          const lastOther = otherMsgs[otherMsgs.length - 1];
+          const threadSeen = seen[t.id];
+          return !threadSeen || lastOther.sentAt > threadSeen;
+        });
+        setReachUnread(hasNew);
+      } catch {}
+    };
+    poll(); // run immediately on mount
+    const id = setInterval(poll, 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   // ── Splash screen — PWA only ──
   // Splash is rendered in SSR HTML (RootShell) so it shows on first paint.
@@ -526,7 +598,7 @@ export default function Layout() {
                 <div className="flex items-center justify-center">
                   <Link
                     to="/reach"
-                    search={{ threadId: undefined, ref: undefined, body: undefined }}
+                    search={{ threadId: undefined, ref: undefined, body: undefined, new: undefined, serial: undefined }}
                     className="relative w-full h-full flex flex-col items-center justify-center gap-1"
                     style={{ color: pathname === "/reach" ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)", transition: "color 2.5s ease" }}
                   >
@@ -541,7 +613,12 @@ export default function Layout() {
                         />
                       )}
                     </AnimatePresence>
-                    <Mail size={19} strokeWidth={pathname === "/reach" ? 2.2 : 1.6} className="relative z-10" />
+                    <div className="relative z-10">
+                      <Mail size={19} strokeWidth={pathname === "/reach" ? 2.2 : 1.6} />
+                      {reachUnread && pathname !== "/reach" && (
+                        <div className="absolute w-2 h-2 rounded-full bg-red-500" style={{ top: -2, right: -3 }} />
+                      )}
+                    </div>
                     <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap relative z-10">Reach Out</span>
                   </Link>
                 </div>

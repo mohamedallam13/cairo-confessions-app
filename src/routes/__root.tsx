@@ -131,7 +131,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
         {/* Splash is in SSR HTML — visible on first paint, no React needed to show it.
             Logo is base64 so there's zero network request. CSS animates it in.
             Inline script instantly removes it for non-PWA. */}
-        <div id="pwa-splash" style={{ position:"fixed", inset:0, zIndex:9999, background:"#050606", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:24, transition:"opacity .6s ease" }}>
+        <div id="pwa-splash" suppressHydrationWarning style={{ position:"fixed", inset:0, zIndex:9999, background:"#050606", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:24, transition:"opacity .6s ease" }}>
           <img id="pwa-splash-logo" src={LOGO_BASE64} alt="" style={{ width:80, height:80, objectFit:"contain", opacity:0 }} />
           <p id="pwa-splash-text" style={{ fontFamily:"sans-serif", fontSize:11, letterSpacing:"0.35em", textTransform:"uppercase", color:"rgba(242,242,242,0.3)", margin:0, opacity:0 }}>Cairo Confessions</p>
         </div>
