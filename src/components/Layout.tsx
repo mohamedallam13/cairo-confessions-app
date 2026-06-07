@@ -281,16 +281,22 @@ export default function Layout() {
     function onThreadSeen() {
       const anonId = getOrCreateAnonId();
       const threads = JSON.parse(localStorage.getItem("cc_reach_threads") ?? "[]") as Array<{
-        id: string; anonId: string; lastActivity: string; messages: Array<{ from: string; sentAt: string }>;
+        id: string; anonId: string; lastActivity: string;
+        messages: Array<{ id: string; from: string; sentAt: string }>;
       }>;
-      const seen: Record<string, string> = JSON.parse(localStorage.getItem("cc_reach_thread_seen") ?? "{}");
+      const seen: Record<string, { msgId: string | null; activity: string }> =
+        JSON.parse(localStorage.getItem("cc_reach_thread_seen_v2") ?? "{}");
       const stillUnread = threads.some((t) => {
         const perspective = t.anonId === anonId ? "sender" : "confessor";
         const others = t.messages.filter((m) => m.from !== perspective);
         const lastMsgSentAt = t.messages[t.messages.length - 1]?.sentAt ?? "";
-        if (others.length === 0 && t.lastActivity <= lastMsgSentAt) return false;
-        const threadSeen = seen[t.id];
-        return !threadSeen || t.lastActivity > threadSeen;
+        const hasReactionActivity = t.lastActivity > lastMsgSentAt;
+        if (others.length === 0 && !hasReactionActivity) return false;
+        const s = seen[t.id];
+        if (!s) return true;
+        if (others.length > 0 && others[others.length - 1].id !== s.msgId) return true;
+        if (hasReactionActivity && t.lastActivity > s.activity) return true;
+        return false;
       });
       if (!stillUnread) setReachUnread(false);
     }
@@ -305,36 +311,41 @@ export default function Layout() {
         const anonId = getOrCreateAnonId();
         if (!anonId) return;
         const threads = await (getThreads as unknown as (o: { data: { anonId: string } }) => Promise<RemoteThread[]>)({ data: { anonId } } as never);
-        const seen: Record<string, string> = JSON.parse(localStorage.getItem("cc_reach_thread_seen") ?? "{}");
+        const seen: Record<string, { msgId: string | null; activity: string }> =
+          JSON.parse(localStorage.getItem("cc_reach_thread_seen_v2") ?? "{}");
 
-        // One-time init: seed cc_reach_thread_seen for threads never opened before,
-        // using fresh Supabase data. This prevents old messages from permanently triggering
-        // the dot on first use. Only seeds threads with no existing entry — never overwrites.
+        // Seed threads never opened: mark as read up to current state so old activity
+        // doesn't permanently trigger the dot on first use.
         let seedChanged = false;
         threads.forEach((t) => {
           if (seen[t.id]) return;
           const otherRole = t.senderAnonId === anonId ? "confessor" : "sender";
-          const hasOtherMsgs = t.messages.some((m) => m.fromRole === otherRole);
-          if (hasOtherMsgs) {
-            seen[t.id] = t.lastActivity;
+          const otherMsgs = t.messages.filter((m) => m.fromRole === otherRole);
+          const lastMsgSentAt = t.messages[t.messages.length - 1]?.sentAt ?? "";
+          if (otherMsgs.length > 0 || t.lastActivity > lastMsgSentAt) {
+            seen[t.id] = { msgId: otherMsgs[otherMsgs.length - 1]?.id ?? null, activity: t.lastActivity };
             seedChanged = true;
           }
         });
-        if (seedChanged) localStorage.setItem("cc_reach_thread_seen", JSON.stringify(seen));
+        if (seedChanged) localStorage.setItem("cc_reach_thread_seen_v2", JSON.stringify(seen));
 
-        // Check for new messages or reactions (arrived after thread was last seen)
+        // Unread = other-party message cursor moved OR reaction activity past what we've seen
         const hasNew = threads.some((t) => {
           const otherRole = t.senderAnonId === anonId ? "confessor" : "sender";
           const otherMsgs = t.messages.filter((m) => m.fromRole === otherRole);
           const lastMsgSentAt = t.messages[t.messages.length - 1]?.sentAt ?? "";
-          if (otherMsgs.length === 0 && t.lastActivity <= lastMsgSentAt) return false;
-          const threadSeen = seen[t.id];
-          return !threadSeen || t.lastActivity > threadSeen;
+          const hasReactionActivity = t.lastActivity > lastMsgSentAt;
+          if (otherMsgs.length === 0 && !hasReactionActivity) return false;
+          const s = seen[t.id];
+          if (!s) return true;
+          if (otherMsgs.length > 0 && otherMsgs[otherMsgs.length - 1].id !== s.msgId) return true;
+          if (hasReactionActivity && t.lastActivity > s.activity) return true;
+          return false;
         });
         setReachUnread(hasNew);
       } catch {}
     };
-    poll(); // run immediately on mount
+    poll();
     const id = setInterval(poll, 60_000);
     window.addEventListener("cc:reaction", poll);
     return () => {
