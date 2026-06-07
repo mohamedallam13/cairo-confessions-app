@@ -336,7 +336,11 @@ export default function Layout() {
     };
     poll(); // run immediately on mount
     const id = setInterval(poll, 60_000);
-    return () => clearInterval(id);
+    window.addEventListener("cc:reaction", poll);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("cc:reaction", poll);
+    };
   }, []);
 
   // ── Splash screen — PWA only ──

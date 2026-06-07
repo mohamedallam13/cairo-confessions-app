@@ -433,7 +433,7 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
             });
             (reactToMessage as unknown as (o: { data: unknown }) => Promise<unknown>)(
               { data: { messageId: m.id, threadId: thread.id, emoji, anonId: myAnonId } } as never
-            ).catch(() => {});
+            ).then(() => window.dispatchEvent(new CustomEvent("cc:reaction"))).catch(() => {});
           }
 
           return (
@@ -814,9 +814,10 @@ function InboxTab({ threads, myAnonId, onOpen }: {
         const last = t.messages[t.messages.length - 1];
         const lastFrom = last ? (last.from === perspective ? "You" : "Them") : null;
         const isReactionActivity = last && t.lastActivity > last.sentAt;
-        const reactionEmojis = isReactionActivity
-          ? [...new Set(t.messages.flatMap((m) => Object.keys(m.reactions ?? {})))].slice(0, 3).join(" ")
+        const lastReactedMsg = isReactionActivity
+          ? [...t.messages].reverse().find((m) => Object.keys(m.reactions ?? {}).length > 0) ?? null
           : null;
+        const reactionEmojis = lastReactedMsg ? Object.keys(lastReactedMsg.reactions).join(" ") : null;
 
         return (
           <button
@@ -879,7 +880,7 @@ function InboxTab({ threads, myAnonId, onOpen }: {
                       <span style={{ color: unread ? "rgba(242,242,242,0.68)" : "rgba(242,242,242,0.45)" }}>
                         {reactionEmojis || "·"} to:{" "}
                       </span>
-                      {last?.content.slice(0, 40)}
+                      {lastReactedMsg?.content.slice(0, 40)}
                     </>
                   ) : (
                     <>
