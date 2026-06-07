@@ -239,7 +239,26 @@ function ResultView({
   onRefresh: () => Promise<void>;
 }) {
   const [refreshing, setRefreshing] = useState(false);
-  const [messagesSeen, setMessagesSeen] = useState(false);
+
+  function getLastMsgSeen(): string | null {
+    try {
+      const map: Record<string, string> = JSON.parse(localStorage.getItem("cc_track_msgs_seen") ?? "{}");
+      return map[refNum] ?? null;
+    } catch { return null; }
+  }
+
+  function markMsgsSeen() {
+    try {
+      const map: Record<string, string> = JSON.parse(localStorage.getItem("cc_track_msgs_seen") ?? "{}");
+      map[refNum] = new Date().toISOString();
+      localStorage.setItem("cc_track_msgs_seen", JSON.stringify(map));
+    } catch {}
+  }
+
+  const lastSeen = getLastMsgSeen();
+  const hasUnseenMessages = r.messages.length > 0 && (
+    !lastSeen || r.messages.some((m) => m.timestamp > lastSeen)
+  );
 
   async function handleRefresh() {
     if (refreshing) return;
@@ -286,7 +305,7 @@ function ResultView({
           {(["status", "messages"] as const).map((t) => (
             <button
               key={t}
-              onClick={() => { setTab(t); if (t === "messages") setMessagesSeen(true); }}
+              onClick={() => { setTab(t); if (t === "messages") markMsgsSeen(); }}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] rounded-[10px] transition-all"
               style={{
                 background: tab === t ? "rgba(255,255,255,0.10)" : "transparent",
@@ -296,9 +315,9 @@ function ResultView({
               {t === "messages" && r.messages.length > 0 && (
                 <span
                   className="grid place-items-center w-4 h-4 rounded-full text-[9px] font-bold transition-all"
-                  style={messagesSeen
-                    ? { background: "rgba(255,255,255,0.08)", color: "rgba(242,242,242,0.25)" }
-                    : { background: "rgba(var(--phase-accent-rgb,4,201,244),0.25)", color: "var(--phase-accent,#04C9F4)" }
+                  style={hasUnseenMessages
+                    ? { background: "rgba(var(--phase-accent-rgb,4,201,244),0.25)", color: "var(--phase-accent,#04C9F4)" }
+                    : { background: "rgba(255,255,255,0.08)", color: "rgba(242,242,242,0.25)" }
                   }
                 >
                   {r.messages.length}
