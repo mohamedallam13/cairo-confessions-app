@@ -101,7 +101,10 @@ function resolvedConfessorAnon(thread: Thread, myAnonId: string): string | null 
 // ─── Reach thread cache ────────────────────────────────────────────────────────
 
 const REACH_CACHE_KEY = "cc_reach_threads";
-const REACH_SEEN_KEY  = "cc_reach_thread_seen"; // Record<threadId, sentAt of last seen msg from other party>
+// v2: { msgId: last other-party message ID seen, activity: lastActivity seen (reactions) }
+const REACH_SEEN_KEY  = "cc_reach_thread_seen_v2";
+
+type SeenEntry = { msgId: string | null; activity: string };
 
 function saveReachCache(threads: Thread[]): void {
   try { localStorage.setItem(REACH_CACHE_KEY, JSON.stringify(threads)); } catch { /* storage full */ }
@@ -114,21 +117,22 @@ function loadReachCache(): Thread[] {
   } catch { return []; }
 }
 
-function markThreadSeen(threadId: string, sentAt: string): void {
+function markThreadSeen(threadId: string, lastOtherMsgId: string | null, lastActivity: string): void {
   try {
     const raw = localStorage.getItem(REACH_SEEN_KEY);
-    const map: Record<string, string> = raw ? JSON.parse(raw) : {};
-    map[threadId] = sentAt;
+    const map: Record<string, SeenEntry> = raw ? JSON.parse(raw) : {};
+    map[threadId] = { msgId: lastOtherMsgId, activity: lastActivity };
     localStorage.setItem(REACH_SEEN_KEY, JSON.stringify(map));
     window.dispatchEvent(new CustomEvent("cc:thread-seen"));
   } catch { /* storage full */ }
 }
 
-function getThreadSeen(threadId: string): string | null {
+function getThreadSeen(threadId: string): SeenEntry | null {
   try {
     const raw = localStorage.getItem(REACH_SEEN_KEY);
-    const map: Record<string, string> = raw ? JSON.parse(raw) : {};
-    return map[threadId] ?? null;
+    const map: Record<string, SeenEntry> = raw ? JSON.parse(raw) : {};
+    const val = map[threadId];
+    return val && typeof val === "object" ? val : null;
   } catch { return null; }
 }
 
@@ -136,10 +140,19 @@ function isThreadUnread(thread: Thread, myAnonId: string): boolean {
   const perspective: Sender = thread.anonId === myAnonId ? "sender" : "confessor";
   const otherMsgs = thread.messages.filter((m) => m.from !== perspective);
   const lastMsgSentAt = thread.messages[thread.messages.length - 1]?.sentAt ?? "";
-  const hasOtherActivity = otherMsgs.length > 0 || thread.lastActivity > lastMsgSentAt;
-  if (!hasOtherActivity) return false;
+  const hasReactionActivity = thread.lastActivity > lastMsgSentAt;
+
+  if (otherMsgs.length === 0 && !hasReactionActivity) return false;
+
   const seen = getThreadSeen(thread.id);
-  return !seen || thread.lastActivity > seen;
+  if (!seen) return otherMsgs.length > 0 || hasReactionActivity;
+
+  // Unread message: last other-party message ID differs from cursor
+  if (otherMsgs.length > 0 && otherMsgs[otherMsgs.length - 1].id !== seen.msgId) return true;
+  // Unread reaction: lastActivity moved past what we've seen
+  if (hasReactionActivity && thread.lastActivity > seen.activity) return true;
+
+  return false;
 }
 
 // ─── Quick messages ────────────────────────────────────────────────────────────
@@ -250,8 +263,11 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
   // Mark thread seen in real-time while viewing — covers messages and reactions arriving via 15s poll
   useEffect(() => {
     const otherMsgs = thread.messages.filter((m) => m.from !== perspective);
-    if (otherMsgs.length === 0) return;
-    markThreadSeen(thread.id, new Date().toISOString());
+    markThreadSeen(
+      thread.id,
+      otherMsgs[otherMsgs.length - 1]?.id ?? null,
+      thread.lastActivity,
+    );
   }, [thread.messages, thread.lastActivity]);
 
   // Fire-and-forget: set confessor_anon_id when confessor opens thread (before replying)
@@ -1046,13 +1062,19 @@ function ReachPage() {
   }
 
   function handleOpen(thread: Thread) {
-    markThreadSeen(thread.id, new Date().toISOString());
+    const perspective: Sender = thread.anonId === myAnonId ? "sender" : "confessor";
+    const otherMsgs = thread.messages.filter((m) => m.from !== perspective);
+    markThreadSeen(thread.id, otherMsgs[otherMsgs.length - 1]?.id ?? null, thread.lastActivity);
     setActiveThread(thread);
     navigate({ to: "/reach", search: CLEAR_SEARCH });
   }
 
   function handleBack() {
-    if (activeThread) markThreadSeen(activeThread.id, new Date().toISOString());
+    if (activeThread) {
+      const perspective: Sender = activeThread.anonId === myAnonId ? "sender" : "confessor";
+      const otherMsgs = activeThread.messages.filter((m) => m.from !== perspective);
+      markThreadSeen(activeThread.id, otherMsgs[otherMsgs.length - 1]?.id ?? null, activeThread.lastActivity);
+    }
     setActiveThread(null);
   }
 
