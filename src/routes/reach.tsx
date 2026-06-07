@@ -67,6 +67,19 @@ function formatMsgTime(iso: string): string {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
+// For message bubbles: time first, date context for older messages
+function formatBubbleTime(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const isToday = d.toDateString() === now.toDateString();
+  if (isToday) return time;
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return `Yesterday · ${time}`;
+  return `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · ${time}`;
+}
+
 function remoteToLocal(t: RemoteThread): Thread {
   return {
     id: t.id,
@@ -505,7 +518,7 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
                 </span>
                 <span className="text-cc-off/15 text-[9px]">·</span>
                 <span className="text-[9px] text-cc-off/20">
-                  {new Date(m.sentAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                  {formatBubbleTime(m.sentAt)}
                 </span>
               </div>
             </div>
