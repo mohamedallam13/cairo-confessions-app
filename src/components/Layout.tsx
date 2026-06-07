@@ -314,21 +314,7 @@ export default function Layout() {
         const seen: Record<string, { msgId: string | null; activity: string }> =
           JSON.parse(localStorage.getItem("cc_reach_thread_seen_v2") ?? "{}");
 
-        // Seed threads never opened: mark as read up to current state so old activity
-        // doesn't permanently trigger the dot on first use.
-        let seedChanged = false;
-        threads.forEach((t) => {
-          if (seen[t.id]) return;
-          const otherRole = t.senderAnonId === anonId ? "confessor" : "sender";
-          const otherMsgs = t.messages.filter((m) => m.fromRole === otherRole);
-          const lastMsgSentAt = t.messages[t.messages.length - 1]?.sentAt ?? "";
-          if (otherMsgs.length > 0 || t.lastActivity > lastMsgSentAt) {
-            seen[t.id] = { msgId: otherMsgs[otherMsgs.length - 1]?.id ?? null, activity: t.lastActivity };
-            seedChanged = true;
-          }
-        });
-        if (seedChanged) localStorage.setItem("cc_reach_thread_seen_v2", JSON.stringify(seen));
-
+        // No seeding — cursor only advances when the user opens a thread.
         // Unread = other-party message cursor moved OR reaction activity past what we've seen
         const hasNew = threads.some((t) => {
           const otherRole = t.senderAnonId === anonId ? "confessor" : "sender";
