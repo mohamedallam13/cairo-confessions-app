@@ -53,6 +53,7 @@ export interface RemoteThread {
   status: "pending" | "delivered" | "rejected";
   createdAt: string;
   lastActivity: string;
+  lastReactedMessageId: string | null;
   messages: RemoteMessage[];
 }
 
@@ -254,6 +255,7 @@ export const getThreads = createServerFn({ method: "POST" })
       status: t["status"] as "pending" | "delivered" | "rejected",
       createdAt: t["created_at"] as string,
       lastActivity: t["last_activity"] as string,
+      lastReactedMessageId: (t["last_reacted_message_id"] as string | null) ?? null,
       messages: ((t["cc_messages"] ?? []) as Array<Record<string, unknown>>)
         .sort((a, b) => new Date(a["sent_at"] as string).getTime() - new Date(b["sent_at"] as string).getTime())
         .map((m) => ({
@@ -321,11 +323,11 @@ export const reactToMessage = createServerFn({ method: "POST" })
     });
     if (!patchRes.ok) return { success: false, error: await patchRes.text() };
 
-    // Update thread last_activity so the other party sees a notification
+    // Update thread so the other party sees a notification for this exact message
     await fetch(supabaseUrl(`cc_threads?id=eq.${threadId}`), {
       method: "PATCH",
       headers: { ...headers, "Prefer": "return=minimal" },
-      body: JSON.stringify({ last_activity: new Date().toISOString() }),
+      body: JSON.stringify({ last_activity: new Date().toISOString(), last_reacted_message_id: messageId }),
     });
 
     return { success: true, reactions };
