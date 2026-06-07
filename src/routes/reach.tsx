@@ -1010,7 +1010,7 @@ function ReachPage() {
 
   function handleSent(thread: Thread) {
     setThreads((prev) => {
-      const next = [thread, ...prev];
+      const next = [thread, ...prev.filter(t => t.id !== thread.id)];
       saveReachCache(next);
       return next;
     });
