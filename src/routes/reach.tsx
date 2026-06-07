@@ -41,6 +41,7 @@ interface Thread {
   confessorAnonId: string | null;
   messages: ThreadMsg[];
   lastActivity: string;
+  lastReactedMessageId: string | null;
   createdAt: string;
   status: "pending" | "delivered" | "rejected";
 }
@@ -80,6 +81,7 @@ function remoteToLocal(t: RemoteThread): Thread {
       reactions: m.reactions ?? {},
     })),
     lastActivity: t.lastActivity,
+    lastReactedMessageId: t.lastReactedMessageId,
     createdAt: t.createdAt,
     status: t.status,
   };
@@ -606,6 +608,7 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
       messages: [firstMsg],
       lastActivity: now,
       createdAt: now,
+      lastReactedMessageId: null,
       status: "pending",
     };
 
@@ -809,9 +812,9 @@ function InboxTab({ threads, myAnonId, onOpen }: {
         const unread = isThreadUnread(t, myAnonId);
         const last = t.messages[t.messages.length - 1];
         const lastFrom = last ? (last.from === perspective ? "You" : "Them") : null;
-        const isReactionActivity = last && t.lastActivity > last.sentAt;
+        const isReactionActivity = last && t.lastActivity > last.sentAt && t.lastReactedMessageId != null;
         const lastReactedMsg = isReactionActivity
-          ? [...t.messages].reverse().find((m) => Object.keys(m.reactions ?? {}).length > 0) ?? null
+          ? t.messages.find((m) => m.id === t.lastReactedMessageId) ?? null
           : null;
         const reactionEmojis = lastReactedMsg ? Object.keys(lastReactedMsg.reactions).join(" ") : null;
 
@@ -987,6 +990,7 @@ function ReachPage() {
               messages: firstMsg ? [firstMsg] : [],
               lastActivity: new Date().toISOString(),
               createdAt: new Date().toISOString(),
+              lastReactedMessageId: null,
               status: "delivered",
             };
             const withStub = [stub, ...mapped];
@@ -1009,6 +1013,7 @@ function ReachPage() {
             confessorAnonId: null,
             messages: firstMsg ? [firstMsg] : [],
             lastActivity: new Date().toISOString(),
+            lastReactedMessageId: null,
             createdAt: new Date().toISOString(),
             status: "delivered",
           };
