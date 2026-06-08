@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { Send, ShieldCheck, Inbox, SquarePen, ArrowLeft, Trash2 } from "lucide-react";
 import { getOrCreateAnonId } from "../lib/anonIdentity";
-import { createThread, replyToThread, getThreads, deleteThread, triggerBuildTracking, markConfessorOpened, reactToMessage, getDailyOutreachCount } from "../lib/reachOut";
+import { createThread, replyToThread, getThreads, deleteThread, blockThread, triggerBuildTracking, markConfessorOpened, reactToMessage, getDailyOutreachCount } from "../lib/reachOut";
 import type { RemoteThread } from "../lib/reachOut";
 
 export const Route = createFileRoute("/reach")({
@@ -367,50 +367,81 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
 
         {/* Right: convo ref + delete */}
         <div className="flex items-center gap-2 shrink-0">
-          {!confirmDelete && (
-            <button
-              onClick={copyRef}
-              className="font-mono text-[9px] transition-colors px-2 py-1 rounded"
-              style={{
-                color: copied ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.22)",
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-              }}
-              title="Copy convo ref"
-            >
-              {copied ? "Copied" : thread.id}
-            </button>
-          )}
-          {!confirmDelete ? (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="text-cc-off/20 hover:text-red-400/60 transition-colors p-1"
-            >
-              <Trash2 size={15} strokeWidth={1.8} />
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase tracking-[0.14em] text-cc-off/30">Delete?</span>
-              <button
-                onClick={() => {
-                  onDeleted(thread.id);
-                  deleteThread({ data: { threadId: thread.id, anonId: myAnonId } } as never).catch(() => {});
-                }}
-                className="text-[10px] uppercase tracking-[0.14em] px-3 py-2 rounded-lg transition-all"
-                style={{ background: "rgba(220,60,60,0.15)", border: "1px solid rgba(220,60,60,0.3)", color: "rgba(220,80,80,0.9)" }}
-              >
-                Yes
-              </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="text-[10px] uppercase tracking-[0.14em] text-cc-off/30 hover:text-cc-off/60 transition-colors"
-              >
-                No
-              </button>
-            </div>
-          )}
+          <button
+            onClick={copyRef}
+            className="font-mono text-[9px] transition-colors px-2 py-1 rounded"
+            style={{
+              color: copied ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.22)",
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
+            title="Copy convo ref"
+          >
+            {copied ? "Copied" : thread.id}
+          </button>
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="text-cc-off/20 hover:text-red-400/60 transition-colors p-1"
+          >
+            <Trash2 size={15} strokeWidth={1.8} />
+          </button>
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {confirmDelete && (
+        <div
+          className="rounded-2xl p-5 space-y-4"
+          style={{ background: "rgba(10,12,16,0.92)", border: "1px solid rgba(220,60,60,0.18)", backdropFilter: "blur(16px)" }}
+        >
+          <div className="space-y-1">
+            <p className="text-[13px] font-medium" style={{ color: "rgba(242,242,242,0.80)" }}>Delete this conversation?</p>
+            {perspective === "confessor" && (
+              <p className="text-[11px] leading-relaxed" style={{ color: "rgba(242,242,242,0.35)" }}>
+                Blocking will prevent this person from messaging you on this confession again.
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            {perspective === "confessor" && (
+              <button
+                onClick={() => {
+                  setConfirmDelete(false);
+                  onDeleted(thread.id);
+                  (blockThread as unknown as (o: { data: unknown }) => Promise<unknown>)({ data: {
+                    threadId: thread.id,
+                    anonId: myAnonId,
+                    senderAnonId: thread.anonId,
+                    confessionSerialNum: Number(thread.confessionRef),
+                  } } as never).catch(() => {});
+                }}
+                className="w-full py-3 text-[11px] uppercase tracking-[0.16em] font-semibold rounded-xl transition-all active:scale-[0.98]"
+                style={{ background: "rgba(220,60,60,0.18)", border: "1px solid rgba(220,60,60,0.35)", color: "rgba(220,80,80,0.95)" }}
+              >
+                Delete &amp; Block
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setConfirmDelete(false);
+                onDeleted(thread.id);
+                (deleteThread as unknown as (o: { data: unknown }) => Promise<unknown>)({ data: { threadId: thread.id, anonId: myAnonId } } as never).catch(() => {});
+              }}
+              className="w-full py-3 text-[11px] uppercase tracking-[0.16em] rounded-xl transition-all active:scale-[0.98]"
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(242,242,242,0.55)" }}
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="w-full py-2 text-[10px] uppercase tracking-[0.14em] transition-colors"
+              style={{ color: "rgba(242,242,242,0.25)" }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div ref={containerRef} className="flex flex-col gap-3 overflow-y-auto" style={{ scrollbarWidth: "none", maxHeight: "42dvh" }}>
@@ -637,6 +668,7 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
       } });
       if (!res.success) {
         if (res.error === "rate_limited") throw new Error("You can start 3 new conversations per day. Come back tomorrow.");
+        if (res.error === "blocked") throw new Error("This confessor has chosen not to receive messages from you on this confession.");
         throw new Error(res.error);
       }
 
