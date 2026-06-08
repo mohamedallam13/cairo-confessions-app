@@ -113,7 +113,7 @@ function Home() {
 
         <Link
           to="/reach"
-          search={{ threadId: undefined, ref: undefined, body: undefined, new: undefined, serial: undefined }}
+          search={{ threadId: undefined, ref: undefined, body: undefined, senderAnonId: undefined, new: undefined, serial: undefined }}
           className="group flex items-center gap-4 w-full px-6 py-5 transition-all active:scale-[0.98]"
           style={{
             background: `linear-gradient(135deg, var(--phase-card-tint, rgba(4,201,244,0.10)), rgba(15,18,20,0.70))`,

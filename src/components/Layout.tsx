@@ -288,13 +288,15 @@ export default function Layout() {
       const stillUnread = threads.some((t) => {
         const perspective = t.anonId === anonId ? "sender" : "confessor";
         const others = t.messages.filter((m) => m.from !== perspective);
-        const lastMsgSentAt = t.messages[t.messages.length - 1]?.sentAt ?? "";
-        const hasReactionActivity = t.lastActivity > lastMsgSentAt;
+        const lastMsg = t.messages[t.messages.length - 1];
+        const lastMsgSentAt = lastMsg?.sentAt ?? "";
+        const lastMsgIsOwn = lastMsg?.from === perspective;
+        const hasReactionActivity = !lastMsgIsOwn && t.lastActivity > lastMsgSentAt;
         if (others.length === 0 && !hasReactionActivity) return false;
         const s = seen[t.id];
         if (!s) return true;
         const lastOtherSentAt = others[others.length - 1]?.sentAt ?? "";
-        return lastOtherSentAt > s || t.lastActivity > s;
+        return lastOtherSentAt > s || (!lastMsgIsOwn && t.lastActivity > s);
       });
       if (!stillUnread) setReachUnread(false);
     }
@@ -325,15 +327,18 @@ export default function Layout() {
 
         // Unread: other-party message OR reaction arrived after thread was last opened
         const hasNew = threads.some((t) => {
-          const otherRole = t.senderAnonId === anonId ? "confessor" : "sender";
+          const myRole = t.senderAnonId === anonId ? "sender" : "confessor";
+          const otherRole = myRole === "sender" ? "confessor" : "sender";
           const otherMsgs = t.messages.filter((m) => m.fromRole === otherRole);
-          const lastMsgSentAt = t.messages[t.messages.length - 1]?.sentAt ?? "";
-          const hasReactionActivity = t.lastActivity > lastMsgSentAt;
+          const lastMsg = t.messages[t.messages.length - 1];
+          const lastMsgSentAt = lastMsg?.sentAt ?? "";
+          const lastMsgIsOwn = lastMsg?.fromRole === myRole;
+          const hasReactionActivity = !lastMsgIsOwn && t.lastActivity > lastMsgSentAt;
           if (otherMsgs.length === 0 && !hasReactionActivity) return false;
           const s = seen[t.id];
           if (!s) return true;
           const lastOtherSentAt = otherMsgs[otherMsgs.length - 1]?.sentAt ?? "";
-          return lastOtherSentAt > s || t.lastActivity > s;
+          return lastOtherSentAt > s || (!lastMsgIsOwn && t.lastActivity > s);
         });
         setReachUnread(hasNew);
       } catch {}
@@ -624,7 +629,7 @@ export default function Layout() {
                 <div className="flex items-center justify-center">
                   <Link
                     to="/reach"
-                    search={{ threadId: undefined, ref: undefined, body: undefined, new: undefined, serial: undefined }}
+                    search={{ threadId: undefined, ref: undefined, body: undefined, senderAnonId: undefined, new: undefined, serial: undefined }}
                     className="relative w-full h-full flex flex-col items-center justify-center gap-1"
                     style={{ color: pathname === "/reach" ? `var(--phase-accent, #04C9F4)` : "rgba(242,242,242,0.28)", transition: "color 2.5s ease" }}
                   >

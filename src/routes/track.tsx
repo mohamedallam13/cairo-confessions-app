@@ -6,8 +6,8 @@ import { getOrCreateAnonId, getMyRefs, saveRefToProfile, isIngesting as checkIng
 import { pollTrackingStatuses, addAnonId, type ResolvedEntry, type ConfessorMessage } from "../lib/fetchTracking";
 import { cancelConfession } from "../lib/cancelConfession";
 import { createRecoveryToken, redeemRecoveryToken } from "../lib/recoveryToken";
-import { getThreads as getReachThreads, type RemoteThread } from "../lib/reachOut";
-import { remoteToLocal, saveReachCache } from "./reach";
+import { getThreads as getReachThreads, markConfessorOpened, type RemoteThread } from "../lib/reachOut";
+import { remoteToLocal, saveReachCache, loadReachCache } from "./reach";
 import { subscribePush, unsubscribePush, sendDirectPush } from "../lib/pushNotifications";
 
 export const Route = createFileRoute("/track")({
@@ -160,9 +160,12 @@ function isValidInput(s: string) {
 
 // ─── Messages tab ────────────────────────────────────────────────────────────
 
-function MessageItem({ msg }: { msg: ConfessorMessage }) {
+function MessageItem({ msg, isNew }: { msg: ConfessorMessage; isNew?: boolean }) {
   const navigate = useNavigate();
   const [replying, setReplying] = useState(false);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
   const d = new Date(msg.timestamp);
   const timeLabel = !isNaN(d.getTime())
     ? d.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
@@ -170,17 +173,63 @@ function MessageItem({ msg }: { msg: ConfessorMessage }) {
 
   async function handleReply() {
     if (replying) return;
+
+    // Fast path — thread already in reach cache, navigate immediately
+    const cached = loadReachCache();
+    if (cached.some((t) => t.id === msg.conversationRef)) {
+      navigate({ to: "/reach", search: { threadId: msg.conversationRef, ref: undefined, body: undefined, senderAnonId: undefined, new: undefined, serial: undefined } });
+      return;
+    }
+
+    // New/unclaimed thread — stay on page, claim it, warm cache, then navigate
     setReplying(true);
-    try {
-      const remote = await (getReachThreads as unknown as (o: { data: { anonId: string } }) => Promise<RemoteThread[]>)({ data: { anonId: getOrCreateAnonId() } } as never);
+    const anonId = getOrCreateAnonId();
+
+    const doWork = async () => {
+      await (markConfessorOpened as unknown as (o: { data: unknown }) => Promise<void>)(
+        { data: { threadId: msg.conversationRef, anonId } } as never
+      );
+      const remote = await (getReachThreads as unknown as (o: { data: { anonId: string } }) => Promise<RemoteThread[]>)(
+        { data: { anonId } } as never
+      );
       saveReachCache(remote.map(remoteToLocal));
-    } catch { /* non-fatal — reach will fetch itself */ }
-    navigate({ to: "/reach", search: { threadId: msg.conversationRef, ref: String(msg.confessionSerialNum), body: msg.message, new: undefined, serial: undefined } });
+    };
+
+    // Wait up to 10s — whether it succeeds, times out, or errors, always navigate
+    try {
+      await Promise.race([
+        doWork(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 20000)),
+      ]);
+    } catch { /* timeout or error — still navigate below */ }
+
+    if (mountedRef.current) {
+      // Always pass ref+body+senderAnonId — /reach uses cache if thread is there, stub if not
+      navigate({
+        to: "/reach",
+        search: {
+          threadId: msg.conversationRef,
+          ref: String(msg.confessionSerialNum),
+          body: msg.message,
+          senderAnonId: msg.senderAnonId,
+          new: undefined,
+          serial: undefined,
+        },
+      });
+      setReplying(false);
+    }
   }
 
   return (
     <div
-      style={{ ...fieldWithPadding, padding: "16px 20px", border: "1px solid rgba(255,255,255,0.10)" }}
+      style={{
+        ...fieldWithPadding,
+        padding: "16px 20px",
+        border: isNew
+          ? "1px solid rgba(var(--phase-accent-rgb,4,201,244),0.35)"
+          : "1px solid rgba(255,255,255,0.10)",
+        background: isNew ? "rgba(var(--phase-accent-rgb,4,201,244),0.04)" : undefined,
+      }}
       className="space-y-3"
     >
       <div className="flex items-center justify-between">
@@ -216,7 +265,7 @@ function MessageItem({ msg }: { msg: ConfessorMessage }) {
   );
 }
 
-function MessagesTab({ messages }: { messages: ConfessorMessage[] }) {
+function MessagesTab({ messages, seenCount }: { messages: ConfessorMessage[]; seenCount: number }) {
   if (messages.length === 0) {
     return (
       <div className="text-center py-10 space-y-1.5">
@@ -226,9 +275,13 @@ function MessagesTab({ messages }: { messages: ConfessorMessage[] }) {
       </div>
     );
   }
+  const reversed = [...messages].reverse();
+  const newCount = Math.max(0, messages.length - seenCount);
   return (
     <div className="space-y-2.5">
-      {[...messages].reverse().map((msg) => <MessageItem key={msg.conversationRef} msg={msg} />)}
+      {reversed.map((msg, i) => (
+        <MessageItem key={msg.conversationRef} msg={msg} isNew={i < newCount} />
+      ))}
     </div>
   );
 }
@@ -256,25 +309,24 @@ function ResultView({
 }) {
   const [refreshing, setRefreshing] = useState(false);
 
-  function getLastMsgSeen(): string | null {
+  function getMsgSeenCount(): number {
     try {
-      const map: Record<string, string> = JSON.parse(localStorage.getItem("cc_track_msgs_seen") ?? "{}");
-      return map[refNum] ?? null;
-    } catch { return null; }
+      const map: Record<string, number> = JSON.parse(localStorage.getItem("cc_track_msgs_seen_count") ?? "{}");
+      return map[refNum] ?? 0;
+    } catch { return 0; }
   }
 
   function markMsgsSeen() {
     try {
-      const map: Record<string, string> = JSON.parse(localStorage.getItem("cc_track_msgs_seen") ?? "{}");
-      map[refNum] = new Date().toISOString();
-      localStorage.setItem("cc_track_msgs_seen", JSON.stringify(map));
+      const map: Record<string, number> = JSON.parse(localStorage.getItem("cc_track_msgs_seen_count") ?? "{}");
+      map[refNum] = r.messages.length;
+      localStorage.setItem("cc_track_msgs_seen_count", JSON.stringify(map));
     } catch {}
   }
 
-  const lastSeen = getLastMsgSeen();
-  const hasUnseenMessages = r.messages.length > 0 && (
-    !lastSeen || r.messages.some((m) => m.timestamp > lastSeen)
-  );
+  // Frozen at mount — highlights stay visible for this session even after markMsgsSeen fires
+  const initialSeenCountRef = useRef(getMsgSeenCount());
+  const hasUnseenMessages = r.messages.length > getMsgSeenCount();
 
   async function handleRefresh() {
     if (refreshing) return;
@@ -643,7 +695,7 @@ function ResultView({
 
       {/* ── Messages tab ── */}
       {!isIngesting && tab === "messages" && (
-        <MessagesTab messages={r.messages} />
+        <MessagesTab messages={r.messages} seenCount={initialSeenCountRef.current} />
       )}
 
     </div>

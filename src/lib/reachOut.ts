@@ -139,10 +139,11 @@ export const createThread = createServerFn({ method: "POST" })
       return { success: false, error: err };
     }
 
-    // GAS sendMessage — makes message appear in confessor's /track Messages tab
+    // GAS sendMessage — writes message to responses DB
     const url = process.env["CC_INTAKE_URL"];
     const token = process.env["CC_INTAKE_TOKEN"];
     if (url && token) {
+      let sendOk = false;
       try {
         const gasRes = await fetch(url, {
           method: "POST",
@@ -159,9 +160,25 @@ export const createThread = createServerFn({ method: "POST" })
           }),
           signal: AbortSignal.timeout(20000),
         });
-        await gasRes.json();
-
+        const gasBody = await gasRes.json() as { success: boolean; error?: string };
+        if (!gasBody.success) {
+          return { success: false, error: gasBody.error ?? "gas_send_failed" };
+        }
+        sendOk = true;
       } catch (e) {
+        console.error("[createThread] sendMessage failed:", e);
+      }
+
+      // buildTracking immediately after a confirmed write — server-side, guaranteed sequence
+      if (sendOk) {
+        try {
+          await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token, action: "buildTracking" }),
+            signal: AbortSignal.timeout(25000),
+          });
+        } catch { /* non-fatal */ }
       }
     }
 

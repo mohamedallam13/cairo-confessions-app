@@ -2,16 +2,17 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { Send, ShieldCheck, Inbox, SquarePen, ArrowLeft, Trash2 } from "lucide-react";
 import { getOrCreateAnonId } from "../lib/anonIdentity";
-import { createThread, replyToThread, getThreads, deleteThread, blockSender, triggerBuildTracking, markConfessorOpened, reactToMessage, getDailyOutreachCount } from "../lib/reachOut";
+import { createThread, replyToThread, getThreads, deleteThread, blockSender, markConfessorOpened, reactToMessage, getDailyOutreachCount } from "../lib/reachOut";
 import type { RemoteThread } from "../lib/reachOut";
 
 export const Route = createFileRoute("/reach")({
   validateSearch: (search: Record<string, unknown>) => ({
-    threadId: typeof search.threadId === "string" ? search.threadId : undefined,
-    ref:      typeof search.ref      === "string" ? search.ref      : undefined,
-    body:     typeof search.body     === "string" ? search.body     : undefined,
-    new:      search.new ? "1" as const : undefined,
-    serial:   search.serial != null ? String(search.serial) : undefined,
+    threadId:     typeof search.threadId     === "string" ? search.threadId     : undefined,
+    ref:          typeof search.ref          === "string" ? search.ref          : undefined,
+    body:         typeof search.body         === "string" ? search.body         : undefined,
+    senderAnonId: typeof search.senderAnonId === "string" ? search.senderAnonId : undefined,
+    new:          search.new ? "1" as const : undefined,
+    serial:       search.serial != null ? String(search.serial) : undefined,
   }),
   head: () => ({
     meta: [
@@ -122,7 +123,7 @@ export function saveReachCache(threads: Thread[]): void {
   try { localStorage.setItem(REACH_CACHE_KEY, JSON.stringify(threads)); } catch { /* storage full */ }
 }
 
-function loadReachCache(): Thread[] {
+export function loadReachCache(): Thread[] {
   try {
     const raw = localStorage.getItem(REACH_CACHE_KEY);
     return raw ? (JSON.parse(raw) as Thread[]) : [];
@@ -151,13 +152,18 @@ function getThreadSeen(threadId: string): string | null {
 function isThreadUnread(thread: Thread, myAnonId: string): boolean {
   const perspective: Sender = thread.anonId === myAnonId ? "sender" : "confessor";
   const otherMsgs = thread.messages.filter((m) => m.from !== perspective);
-  const lastMsgSentAt = thread.messages[thread.messages.length - 1]?.sentAt ?? "";
-  const hasReactionActivity = thread.lastActivity > lastMsgSentAt;
+  const lastMsg = thread.messages[thread.messages.length - 1];
+  const lastMsgSentAt = lastMsg?.sentAt ?? "";
+  const lastMsgIsOwn = lastMsg?.from === perspective;
+  // Only count lastActivity as reaction activity if the last message isn't ours
+  // (prevents server-time skew from flipping back to unread after we send)
+  const hasReactionActivity = !lastMsgIsOwn && thread.lastActivity > lastMsgSentAt;
   if (otherMsgs.length === 0 && !hasReactionActivity) return false;
   const seen = getThreadSeen(thread.id);
   if (!seen) return true;
   const lastOtherSentAt = otherMsgs[otherMsgs.length - 1]?.sentAt ?? "";
-  return lastOtherSentAt > seen || thread.lastActivity > seen;
+  const activityUnread = !lastMsgIsOwn && thread.lastActivity > seen;
+  return lastOtherSentAt > seen || activityUnread;
 }
 
 // ─── Quick messages ────────────────────────────────────────────────────────────
@@ -265,6 +271,11 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
     });
   }
 
+  // Mark thread seen immediately when view opens — covers deep-link and inbox opens
+  useEffect(() => {
+    markThreadSeen(thread.id);
+  }, []);
+
   // Fire-and-forget: set confessor_anon_id when confessor opens thread (before replying)
   useEffect(() => {
     if (perspective === "confessor" && !thread.confessorAnonId) {
@@ -308,6 +319,7 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
       lastActivity: newMsg.sentAt,
     };
     onUpdated(updated);
+    markThreadSeen(thread.id);
     setReply("");
 
     const res = await (replyToThread as unknown as (opts: { data: unknown }) => Promise<{ success: true } | { success: false; error: string }>)({ data: {
@@ -678,8 +690,6 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
       }
 
       onSent(thread);
-      // Fire-and-forget — rebuilds tracking file so message appears in confessor's /track
-      (triggerBuildTracking as unknown as (opts: { data: unknown }) => Promise<void>)({ data: {} } as never).catch(() => {});
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
       setSending(false);
@@ -951,17 +961,18 @@ function InboxTab({ threads, myAnonId, onOpen }: {
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
-const CLEAR_SEARCH = { threadId: undefined, ref: undefined, body: undefined, new: undefined, serial: undefined } as const;
+const CLEAR_SEARCH = { threadId: undefined, ref: undefined, body: undefined, senderAnonId: undefined, new: undefined, serial: undefined } as const;
 
 function ReachPage() {
   const search    = Route.useSearch();
   const navigate  = useNavigate();
 
-  const threadId  = search.threadId;
-  const ref       = search.ref;
-  const body      = search.body;
-  const isCompose = search.new === "1";
-  const serial    = search.serial;
+  const threadId     = search.threadId;
+  const ref          = search.ref;
+  const body         = search.body;
+  const senderAnonId = search.senderAnonId;
+  const isCompose    = search.new === "1";
+  const serial       = search.serial;
 
   const [threads, setThreads]           = useState<Thread[]>([]);
   const [activeThread, setActiveThread] = useState<Thread | null>(null);
@@ -1020,14 +1031,13 @@ function ReachPage() {
           if (found) {
             setActiveThread(found);
           } else if (ref) {
-            // Confessor deep-link: thread not in Supabase yet (old message flow)
             const firstMsg: ThreadMsg | undefined = body
               ? { id: "tmsg_seed_" + threadId, from: "sender", content: body, sentAt: new Date(Date.now() - 60000).toISOString(), reactions: {} }
               : undefined;
             const stub: Thread = {
               id: threadId,
               confessionRef: ref.toUpperCase(),
-              anonId: "anon_sender_" + threadId,
+              anonId: senderAnonId ?? ("anon_sender_" + threadId),
               confessorAnonId: null,
               messages: firstMsg ? [firstMsg] : [],
               lastActivity: new Date().toISOString(),
@@ -1043,7 +1053,6 @@ function ReachPage() {
         }
       })
       .catch(() => {
-        // On network error: fall back to cache; if deep-link and no cache, build stub
         if (threadId && ref && cached.length === 0) {
           const firstMsg: ThreadMsg | undefined = body
             ? { id: "tmsg_seed_" + threadId, from: "sender", content: body, sentAt: new Date(Date.now() - 60000).toISOString(), reactions: {} }
@@ -1051,7 +1060,7 @@ function ReachPage() {
           const stub: Thread = {
             id: threadId,
             confessionRef: ref.toUpperCase(),
-            anonId: "anon_sender_" + threadId,
+            anonId: senderAnonId ?? ("anon_sender_" + threadId),
             confessorAnonId: null,
             messages: firstMsg ? [firstMsg] : [],
             lastActivity: new Date().toISOString(),
@@ -1076,6 +1085,7 @@ function ReachPage() {
     });
     setReachDailyUsed((prev) => prev + 1);
     setActiveThread(thread);
+    markThreadSeen(thread.id);
     navigate({ to: "/reach", search: CLEAR_SEARCH });
   }
 
