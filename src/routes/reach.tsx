@@ -398,11 +398,22 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
             <p className="text-[13px] font-medium" style={{ color: "rgba(242,242,242,0.80)" }}>Delete this conversation?</p>
             {perspective === "confessor" && (
               <p className="text-[11px] leading-relaxed" style={{ color: "rgba(242,242,242,0.35)" }}>
-                Blocking will prevent this person from messaging you on this confession again.
+                Block prevents this person from messaging you on this confession again.
               </p>
             )}
           </div>
           <div className="flex flex-col gap-2">
+            <button
+              onClick={() => {
+                setConfirmDelete(false);
+                onDeleted(thread.id);
+                (deleteThread as unknown as (o: { data: unknown }) => Promise<unknown>)({ data: { threadId: thread.id, anonId: myAnonId } } as never).catch(() => {});
+              }}
+              className="w-full py-3 text-[11px] uppercase tracking-[0.16em] rounded-xl transition-all active:scale-[0.98]"
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(242,242,242,0.55)" }}
+            >
+              Delete
+            </button>
             {perspective === "confessor" && (
               <button
                 onClick={() => {
@@ -418,20 +429,9 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
                 className="w-full py-3 text-[11px] uppercase tracking-[0.16em] font-semibold rounded-xl transition-all active:scale-[0.98]"
                 style={{ background: "rgba(220,60,60,0.18)", border: "1px solid rgba(220,60,60,0.35)", color: "rgba(220,80,80,0.95)" }}
               >
-                Delete &amp; Block
+                Block
               </button>
             )}
-            <button
-              onClick={() => {
-                setConfirmDelete(false);
-                onDeleted(thread.id);
-                (deleteThread as unknown as (o: { data: unknown }) => Promise<unknown>)({ data: { threadId: thread.id, anonId: myAnonId } } as never).catch(() => {});
-              }}
-              className="w-full py-3 text-[11px] uppercase tracking-[0.16em] rounded-xl transition-all active:scale-[0.98]"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(242,242,242,0.55)" }}
-            >
-              Delete
-            </button>
             <button
               onClick={() => setConfirmDelete(false)}
               className="w-full py-2 text-[10px] uppercase tracking-[0.14em] transition-colors"
