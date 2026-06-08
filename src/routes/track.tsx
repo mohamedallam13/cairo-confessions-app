@@ -6,7 +6,7 @@ import { getOrCreateAnonId, getMyRefs, saveRefToProfile, isIngesting as checkIng
 import { pollTrackingStatuses, addAnonId, type ResolvedEntry, type ConfessorMessage } from "../lib/fetchTracking";
 import { cancelConfession } from "../lib/cancelConfession";
 import { createRecoveryToken, redeemRecoveryToken } from "../lib/recoveryToken";
-import { subscribePush, unsubscribePush } from "../lib/pushNotifications";
+import { subscribePush, unsubscribePush, sendDirectPush } from "../lib/pushNotifications";
 
 export const Route = createFileRoute("/track")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -912,7 +912,9 @@ function extractTokenFromInput(input: string): string | null {
 function TransferOutModal({ anonId, onClose }: { anonId: string; onClose: () => void }) {
   const [stage, setStage]           = useState<"consent" | "generating" | "ready">("consent");
   const [link, setLink]             = useState("");
+  const [refNum, setRefNum]         = useState<string | null>(null);
   const [copied, setCopied]         = useState(false);
+  const [copiedRef, setCopiedRef]   = useState(false);
   const [countdown, setCountdown]   = useState(900); // 15 min
   const [genError, setGenError]     = useState("");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -924,14 +926,20 @@ function TransferOutModal({ anonId, onClose }: { anonId: string; onClose: () => 
   async function generate() {
     setStage("generating");
     setGenError("");
-    const res = await (createRecoveryToken as unknown as (opts: { data: { anonId: string } }) => Promise<{ ok: boolean; token?: string; error?: string }>)({ data: { anonId } } as never);
+    const res = await (createRecoveryToken as unknown as (opts: { data: { anonId: string } }) => Promise<{ ok: boolean; token?: string; refNum?: string | null; error?: string }>)({ data: { anonId } } as never);
     if (!res.ok || !res.token) {
       setGenError("Couldn't generate a link. Try again.");
       setStage("consent");
       return;
     }
+    if (res.refNum === null) {
+      setGenError("Your session has no confessions or messages — nothing to transfer.");
+      setStage("consent");
+      return;
+    }
     const base = typeof window !== "undefined" ? `${window.location.origin}/track` : "/track";
     setLink(`${base}?t=${res.token}`);
+    setRefNum(res.refNum ?? null);
     setCountdown(900);
     setStage("ready");
     timerRef.current = setInterval(() => {
@@ -1018,19 +1026,44 @@ function TransferOutModal({ anonId, onClose }: { anonId: string; onClose: () => 
               <p className="text-cc-off/35 text-[12px]">Paste this in the other browser. Never share it with anyone else.</p>
             </div>
 
-            <div
-              className="flex items-center gap-3 px-4 py-3 rounded-xl"
-              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}
-            >
-              <span className="flex-1 font-mono text-[11px] text-cc-off/50 truncate">{link}</span>
-              <button
-                onClick={copyLink}
-                className="flex items-center gap-1.5 shrink-0 text-[10.5px] uppercase tracking-[0.14em] transition-all active:scale-95"
-                style={{ color: copied ? "rgba(60,200,120,0.85)" : "var(--phase-accent,#04C9F4)" }}
+            <div className="space-y-2">
+              <div
+                className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}
               >
-                {copied ? <Check size={12} strokeWidth={2.2} /> : <Copy size={12} strokeWidth={2} />}
-                {copied ? "Copied" : "Copy"}
-              </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] uppercase tracking-[0.18em] text-cc-off/25 mb-0.5">Transfer link</p>
+                  <span className="font-mono text-[11px] text-cc-off/50 truncate block">{link}</span>
+                </div>
+                <button
+                  onClick={copyLink}
+                  className="flex items-center gap-1.5 shrink-0 text-[10.5px] uppercase tracking-[0.14em] transition-all active:scale-95"
+                  style={{ color: copied ? "rgba(60,200,120,0.85)" : "var(--phase-accent,#04C9F4)" }}
+                >
+                  {copied ? <Check size={12} strokeWidth={2.2} /> : <Copy size={12} strokeWidth={2} />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+
+              {refNum && (
+                <div
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[9px] uppercase tracking-[0.18em] text-cc-off/25 mb-0.5">Reference number</p>
+                    <span className="font-mono text-[11px] text-cc-off/50">{refNum}</span>
+                  </div>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(refNum).then(() => { setCopiedRef(true); setTimeout(() => setCopiedRef(false), 2500); }); }}
+                    className="flex items-center gap-1.5 shrink-0 text-[10.5px] uppercase tracking-[0.14em] transition-all active:scale-95"
+                    style={{ color: copiedRef ? "rgba(60,200,120,0.85)" : "var(--phase-accent,#04C9F4)" }}
+                  >
+                    {copiedRef ? <Check size={12} strokeWidth={2.2} /> : <Copy size={12} strokeWidth={2} />}
+                    {copiedRef ? "Copied" : "Copy"}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between">
@@ -1098,7 +1131,7 @@ function ImportModal({
     const ref   = refInput.trim().toUpperCase();
 
     if (!token) { setErr("Paste a valid transfer link."); return; }
-    if (!/^[A-Z0-9]{8}$/.test(ref)) { setErr("Reference number must be 8 characters — letters and numbers."); return; }
+    if (!/^[A-Za-z0-9]{6,30}$/.test(ref)) { setErr("Enter a valid reference number."); return; }
 
     setLoading(true);
     let res: { ok: boolean; anonId?: string; refNums?: unknown[]; error?: string };
@@ -1110,18 +1143,21 @@ function ImportModal({
         (redeemRecoveryToken as unknown as (opts: { data: { recoveryToken: string; refNum: string } }) => Promise<typeof res>)({ data: { recoveryToken: token, refNum: ref } } as never),
         timeout,
       ]);
-    } catch {
+    } catch (e) {
       setLoading(false);
-      setErr("Something went wrong. Try again.");
+      setErr("Connection failed. Check your network and try again.");
+      console.error("[ImportModal] unexpected error:", e);
       return;
     }
     setLoading(false);
 
     if (!res.ok) {
-      const msg = res.error === "expired"       ? "This link has expired. Ask for a new one." :
-                  res.error === "wrong_ref"     ? "That reference number doesn't match this session." :
-                  res.error === "invalid_token" ? "This link is invalid or has already been used." :
-                  "Something went wrong. Try again.";
+      const msg = res.error === "expired"        ? "This link has expired. Get a new one from the original browser." :
+                  res.error === "wrong_ref"      ? "That reference number doesn't match this session." :
+                  res.error === "invalid_token"  ? "This link is invalid or has already been used." :
+                  res.error === "bad_response"   ? "Unexpected response from server. Try again." :
+                  res.error === "not_configured" ? "Server not configured. Try again later." :
+                  `Error: ${res.error}`;
       setErr(msg);
       return;
     }
@@ -1153,8 +1189,8 @@ function ImportModal({
           </h2>
           <p className="text-cc-off/40 text-[13px] leading-[1.7]">
             {hasToken
-              ? "Enter one reference number from your confessions to verify this is your session."
-              : "Go to your original browser, tap \"Get transfer link\", and paste it below. Then enter one of your reference numbers."}
+              ? "Enter one of your reference numbers — from your confessions or your sent messages — to verify this is your session."
+              : "Go to your original browser, tap \"Get transfer link\", and paste it below. Then enter one of your reference numbers (confession or sent message)."}
           </p>
         </div>
 
@@ -1260,10 +1296,12 @@ function NotificationsToggle({ anonId }: { anonId: string }) {
           applicationServerKey: key as any,
         });
         const j = sub.toJSON();
-        await (subscribePush as any)({
+        const subJson = { endpoint: j.endpoint!, keys: { p256dh: j.keys!["p256dh"], auth: j.keys!["auth"] } };
+        await (subscribePush as any)({ data: { anonId, subscription: subJson } });
+        await (sendDirectPush as any)({
           data: {
-            anonId,
-            subscription: { endpoint: j.endpoint!, keys: { p256dh: j.keys!["p256dh"], auth: j.keys!["auth"] } },
+            subscription: subJson,
+            payload: { title: "Cairo Confessions", body: "Notifications enabled", url: "/track" },
           },
         });
         localStorage.setItem("cc_push_enabled", "1");
@@ -1481,11 +1519,11 @@ function TrackPage() {
     };
   }, [runPoll]);
 
-  // Auto-open import modal when ?t or ?recover=1 is in URL
+  // Manual opens via "Recover Space" button in settings
   useEffect(() => {
-    if (search.t || search.recover === "1") setShowImportModal(true);
-    if (search.recover === "1") navigate({ to: "/track", search: { t: undefined, recover: undefined }, replace: true });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    function onOpenImport() { setShowImportModal(true); }
+    window.addEventListener("cc:open-import-modal", onOpenImport);
+    return () => window.removeEventListener("cc:open-import-modal", onOpenImport);
   }, []);
 
 
@@ -1495,6 +1533,7 @@ function TrackPage() {
     setMyRefs(getMyRefs());
     setShowImportModal(false);
     runPoll();
+    window.dispatchEvent(new CustomEvent("cc:import-done"));
   }
 
   function openRef(ref: string) {
@@ -1646,10 +1685,14 @@ function TrackPage() {
       {showTransferOut && (
         <TransferOutModal anonId={anonId} onClose={() => setShowTransferOut(false)} />
       )}
-      {(showImportModal || pendingToken) && (
+      {(showImportModal || !!pendingToken || search.recover === "1") && (
         <ImportModal
           prefilledToken={pendingToken}
-          onClose={() => { setShowImportModal(false); if (pendingToken) navigate({ to: "/track", search: { t: undefined, recover: undefined }, replace: true }); }}
+          onClose={() => {
+            setShowImportModal(false);
+            if (pendingToken || search.recover === "1") navigate({ to: "/track", search: { t: undefined, recover: undefined }, replace: true });
+            window.dispatchEvent(new CustomEvent("cc:import-done"));
+          }}
           onImported={handleImported}
         />
       )}
@@ -1845,9 +1888,9 @@ function TrackPage() {
       {/* ── Device / session footer ── */}
       <div
         className="rounded-2xl p-4 space-y-3"
-        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+        style={{ background: "rgba(8,10,12,0.75)", border: "1px solid rgba(255,255,255,0.18)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}
       >
-        <p className="text-[9px] uppercase tracking-[0.2em] text-cc-off/20 text-center">My Space Settings</p>
+        <p className="text-[9px] uppercase tracking-[0.2em] text-cc-off/60 text-center font-semibold">My Space Settings</p>
         <div className="space-y-2">
           <NotificationsToggle anonId={anonId} />
           <button
@@ -1864,11 +1907,11 @@ function TrackPage() {
           </button>
           <button
             onClick={() => setShowTransferOut(true)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10.5px] uppercase tracking-[0.16em] transition-all active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-display text-[11px] uppercase tracking-[0.18em] transition-all active:scale-[0.98]"
             style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.07)",
-              color: "rgba(242,242,242,0.30)",
+              background: "rgba(255,255,255,0.07)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              color: "rgba(242,242,242,0.65)",
             }}
           >
             <ArrowRightLeft size={11} strokeWidth={1.8} />

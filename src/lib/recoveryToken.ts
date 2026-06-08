@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 export type CreateTokenResult =
-  | { ok: true; token: string }
+  | { ok: true; token: string; refNum: string | null }
   | { ok: false; error: string };
 
 export type RedeemTokenResult =
@@ -33,11 +33,23 @@ export const redeemRecoveryToken = createServerFn({ method: "POST" })
     if (!url || !token) return { ok: false, error: "not_configured" };
     if (!recoveryToken || !refNum) return { ok: false, error: "missing params" };
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "redeemRecoveryToken", recoveryToken, refNum, token }),
-    });
-    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-    return await res.json() as RedeemTokenResult;
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "redeemRecoveryToken", recoveryToken, refNum, token }),
+        signal: AbortSignal.timeout(30000),
+      });
+      const text = await res.text();
+      try {
+        return JSON.parse(text) as RedeemTokenResult;
+      } catch {
+        console.error("[redeemRecoveryToken] non-JSON response:", text.slice(0, 200));
+        return { ok: false, error: "bad_response" };
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("[redeemRecoveryToken] fetch error:", msg);
+      return { ok: false, error: msg };
+    }
   });

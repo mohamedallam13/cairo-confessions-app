@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { sendPushToUser } from "./pushNotifications";
 
 function getSupabaseHeaders() {
   const key = process.env["SUPABASE_ANON_KEY"]!;
@@ -234,6 +235,25 @@ export const replyToThread = createServerFn({ method: "POST" })
       headers: { ...headers, "Prefer": "return=minimal" },
       body: JSON.stringify(update),
     });
+
+    // Push notification to recipient — best-effort, non-blocking
+    const threadFetch = await fetch(
+      supabaseUrl(`cc_threads?id=eq.${p.threadId}&select=sender_anon_id,confessor_anon_id,confession_serial_num`),
+      { headers },
+    );
+    if (threadFetch.ok) {
+      const rows = await threadFetch.json() as Array<{ sender_anon_id: string; confessor_anon_id: string | null; confession_serial_num: number }>;
+      if (rows.length > 0) {
+        const thread = rows[0];
+        const recipientId = p.fromRole === "confessor" ? thread.sender_anon_id : thread.confessor_anon_id;
+        if (recipientId) {
+          const body = p.fromRole === "confessor"
+            ? `Message from Confessor: #${thread.confession_serial_num}`
+            : `Message from ${p.anonId.slice(0, 10)}…`;
+          sendPushToUser(recipientId, { title: "Cairo Confessions", body, url: `/reach?threadId=${p.threadId}` }).catch(() => {});
+        }
+      }
+    }
 
     return { success: true };
   });

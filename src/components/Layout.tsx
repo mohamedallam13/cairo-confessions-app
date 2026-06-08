@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import type React from "react";
 import { Link, Outlet, useLocation, useRouter } from "@tanstack/react-router";
-import { House, Mail, ChevronLeft, Newspaper, CalendarDays } from "lucide-react";
+import { HouseHeart, Mail, ChevronLeft, Newspaper, CalendarDays } from "lucide-react";
 import { getIngestingRefs, getOrCreateAnonId, detectBrowser, getMyRefs } from "../lib/anonIdentity";
 import { getThreads } from "../lib/reachOut";
 import type { RemoteThread } from "../lib/reachOut";
@@ -363,6 +363,23 @@ export default function Layout() {
 
   // ── Identity reveal — show on /track until user explicitly dismisses ──
   const [showIdentityReveal, setShowIdentityReveal] = useState(false);
+  const [importInProgress, setImportInProgress] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const p = new URLSearchParams(window.location.search);
+    return !!(p.get("t") || p.get("recover") === "1");
+  });
+
+  useEffect(() => {
+    function onStart() { setImportInProgress(true); }
+    function onDone()  { setImportInProgress(false); }
+    window.addEventListener("cc:import-start", onStart);
+    window.addEventListener("cc:import-done",  onDone);
+    return () => {
+      window.removeEventListener("cc:import-start", onStart);
+      window.removeEventListener("cc:import-done",  onDone);
+    };
+  }, []);
+
   useEffect(() => {
     if (pathname !== "/track") return;
     if (!localStorage.getItem("cc_identity_introduced")) {
@@ -461,7 +478,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen flex flex-col" style={{ position: "relative" }}>
 
-      {showIdentityReveal && !sessionConflict && (
+      {showIdentityReveal && !sessionConflict && !importInProgress && (
         <IdentityRevealModal
           anonId={localAnonId}
           onDone={handleIdentityDone}
@@ -476,6 +493,7 @@ export default function Layout() {
           localAnonId={localAnonId}
           onDismiss={handleConflictDismiss}
           onRecover={() => {
+            setImportInProgress(true);
             setSessionConflict(null);
             router.navigate({ to: "/track", search: { t: undefined, recover: "1" } });
           }}
@@ -593,7 +611,7 @@ export default function Layout() {
                       )}
                     </AnimatePresence>
                     <div className="relative z-10">
-                      <House size={19} strokeWidth={pathname === "/track" ? 2.2 : 1.6} />
+                      <HouseHeart size={19} strokeWidth={pathname === "/track" ? 2.2 : 1.6} />
                       {hasIngesting && pathname !== "/track" && (
                         <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
                       )}
