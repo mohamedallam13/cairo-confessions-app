@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { sendPushToUser } from "./pushNotifications";
+import { sanitizeText } from "./sanitize";
 
 function getSupabaseHeaders() {
   const key = process.env["SUPABASE_ANON_KEY"]!;
@@ -71,6 +72,8 @@ export const createThread = createServerFn({ method: "POST" })
       senderEmail: string;
     };
 
+    const cleanMessage = sanitizeText(p.message);
+
     const now = new Date().toISOString();
     const headers = getSupabaseHeaders();
 
@@ -130,7 +133,7 @@ export const createThread = createServerFn({ method: "POST" })
         id: p.messageId,
         thread_id: p.conversationRef,
         from_role: "sender",
-        content: p.message,
+        content: cleanMessage,
         sent_at: now,
       }),
     });
@@ -153,7 +156,7 @@ export const createThread = createServerFn({ method: "POST" })
             action: "sendMessage",
             conversationRef: p.conversationRef,
             confessionSerialNum: p.confessionSerialNum,
-            message: p.message,
+            message: cleanMessage,
             messageType: p.type,
             senderEmail: p.senderEmail || "",
             senderAnonId: p.senderAnonId,
@@ -209,6 +212,8 @@ export const replyToThread = createServerFn({ method: "POST" })
       anonId: string;
     };
 
+    const cleanContent = sanitizeText(p.content);
+
     const now = new Date().toISOString();
     const headers = getSupabaseHeaders();
 
@@ -232,7 +237,7 @@ export const replyToThread = createServerFn({ method: "POST" })
         id: p.messageId,
         thread_id: p.threadId,
         from_role: p.fromRole,
-        content: p.content,
+        content: cleanContent,
         sent_at: now,
       }),
     });

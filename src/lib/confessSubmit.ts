@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { sanitizeText } from "./sanitize";
 
 export interface SubmitPayload {
   refNum:      string;
@@ -31,14 +32,16 @@ export const submitConfession = createServerFn({ method: "POST" })
       return { success: false, step: "unknown", error: "Intake endpoint not configured" };
     }
 
-    if (payload.body.length > 2500) {
+    const cleanBody = sanitizeText(payload.body);
+
+    if (cleanBody.length > 2500) {
       return { success: false, step: "unknown", error: "Confession exceeds 2500 characters" };
     }
 
     const res = await fetch(url, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ ...payload, token }),
+      body:    JSON.stringify({ ...payload, body: cleanBody, token }),
     });
 
     if (!res.ok) {
