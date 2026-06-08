@@ -73,6 +73,16 @@ export const createThread = createServerFn({ method: "POST" })
     const now = new Date().toISOString();
     const headers = getSupabaseHeaders();
 
+    // Check if this sender is blocked from messaging this confession
+    const blockRes = await fetch(
+      supabaseUrl(`cc_blocks?sender_anon_id=eq.${p.senderAnonId}&confession_serial_num=eq.${p.confessionSerialNum}&select=sender_anon_id&limit=1`),
+      { headers },
+    );
+    if (blockRes.ok) {
+      const blocks = await blockRes.json() as unknown[];
+      if (blocks.length > 0) return { success: false, error: "blocked" };
+    }
+
     // Check for existing active thread between this sender and this confession
     const existingRes = await fetch(
       supabaseUrl(`cc_threads?confession_serial_num=eq.${p.confessionSerialNum}&sender_anon_id=eq.${p.senderAnonId}&is_deleted=eq.false&select=id&limit=1`),
@@ -331,6 +341,39 @@ export const reactToMessage = createServerFn({ method: "POST" })
     });
 
     return { success: true, reactions };
+  });
+
+// Soft-deletes a thread and blocks the sender from messaging this confession again
+export const blockThread = createServerFn({ method: "POST" })
+  .handler(async (ctx): Promise<{ success: true } | { success: false; error: string }> => {
+    const { threadId, anonId, senderAnonId, confessionSerialNum } = ctx.data as unknown as {
+      threadId: string;
+      anonId: string;           // requester (must be sender or confessor)
+      senderAnonId: string;     // the person being blocked
+      confessionSerialNum: number;
+    };
+    const headers = getSupabaseHeaders();
+
+    // Soft-delete the thread
+    const delRes = await fetch(
+      supabaseUrl(`cc_threads?id=eq.${threadId}&or=(sender_anon_id.eq.${anonId},confessor_anon_id.eq.${anonId})`),
+      { method: "PATCH", headers: { ...headers, "Prefer": "return=minimal" }, body: JSON.stringify({ is_deleted: true }) },
+    );
+    if (!delRes.ok) return { success: false, error: await delRes.text() };
+
+    // Insert block record
+    const blockRes = await fetch(supabaseUrl("cc_blocks"), {
+      method: "POST",
+      headers: { ...headers, "Prefer": "return=minimal" },
+      body: JSON.stringify({ sender_anon_id: senderAnonId, confession_serial_num: confessionSerialNum }),
+    });
+    if (!blockRes.ok) {
+      const err = await blockRes.text();
+      // Ignore unique violation (already blocked)
+      if (!err.includes("23505")) return { success: false, error: err };
+    }
+
+    return { success: true };
   });
 
 // Triggers GAS tracking file rebuild — called fire-and-forget from client after send
