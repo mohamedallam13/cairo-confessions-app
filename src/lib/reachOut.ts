@@ -343,34 +343,23 @@ export const reactToMessage = createServerFn({ method: "POST" })
     return { success: true, reactions };
   });
 
-// Soft-deletes a thread and blocks the sender from messaging this confession again
-export const blockThread = createServerFn({ method: "POST" })
+// Blocks the sender from messaging this confession again — thread stays in inbox
+export const blockSender = createServerFn({ method: "POST" })
   .handler(async (ctx): Promise<{ success: true } | { success: false; error: string }> => {
-    const { threadId, anonId, senderAnonId, confessionSerialNum } = ctx.data as unknown as {
-      threadId: string;
-      anonId: string;           // requester (must be sender or confessor)
-      senderAnonId: string;     // the person being blocked
+    const { senderAnonId, confessionSerialNum } = ctx.data as unknown as {
+      senderAnonId: string;
       confessionSerialNum: number;
     };
     const headers = getSupabaseHeaders();
 
-    // Soft-delete the thread
-    const delRes = await fetch(
-      supabaseUrl(`cc_threads?id=eq.${threadId}&or=(sender_anon_id.eq.${anonId},confessor_anon_id.eq.${anonId})`),
-      { method: "PATCH", headers: { ...headers, "Prefer": "return=minimal" }, body: JSON.stringify({ is_deleted: true }) },
-    );
-    if (!delRes.ok) return { success: false, error: await delRes.text() };
-
-    // Insert block record
-    const blockRes = await fetch(supabaseUrl("cc_blocks"), {
+    const res = await fetch(supabaseUrl("cc_blocks"), {
       method: "POST",
       headers: { ...headers, "Prefer": "return=minimal" },
       body: JSON.stringify({ sender_anon_id: senderAnonId, confession_serial_num: confessionSerialNum }),
     });
-    if (!blockRes.ok) {
-      const err = await blockRes.text();
-      // Ignore unique violation (already blocked)
-      if (!err.includes("23505")) return { success: false, error: err };
+    if (!res.ok) {
+      const err = await res.text();
+      if (!err.includes("23505")) return { success: false, error: err }; // ignore duplicate
     }
 
     return { success: true };

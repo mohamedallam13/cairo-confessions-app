@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { Send, ShieldCheck, Inbox, SquarePen, ArrowLeft, Trash2 } from "lucide-react";
 import { getOrCreateAnonId } from "../lib/anonIdentity";
-import { createThread, replyToThread, getThreads, deleteThread, blockThread, triggerBuildTracking, markConfessorOpened, reactToMessage, getDailyOutreachCount } from "../lib/reachOut";
+import { createThread, replyToThread, getThreads, deleteThread, blockSender, triggerBuildTracking, markConfessorOpened, reactToMessage, getDailyOutreachCount } from "../lib/reachOut";
 import type { RemoteThread } from "../lib/reachOut";
 
 export const Route = createFileRoute("/reach")({
@@ -418,10 +418,7 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
               <button
                 onClick={() => {
                   setConfirmDelete(false);
-                  onDeleted(thread.id);
-                  (blockThread as unknown as (o: { data: unknown }) => Promise<unknown>)({ data: {
-                    threadId: thread.id,
-                    anonId: myAnonId,
+                  (blockSender as unknown as (o: { data: unknown }) => Promise<unknown>)({ data: {
                     senderAnonId: thread.anonId,
                     confessionSerialNum: Number(thread.confessionRef),
                   } } as never).catch(() => {});
