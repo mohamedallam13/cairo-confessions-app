@@ -6,8 +6,8 @@ import { getOrCreateAnonId, getMyRefs, saveRefToProfile, isIngesting as checkIng
 import { pollTrackingStatuses, addAnonId, type ResolvedEntry, type ConfessorMessage } from "../lib/fetchTracking";
 import { cancelConfession } from "../lib/cancelConfession";
 import { createRecoveryToken, redeemRecoveryToken } from "../lib/recoveryToken";
-import { getThreads as getReachThreads, markConfessorOpened, type RemoteThread } from "../lib/reachOut";
-import { remoteToLocal, saveReachCache, loadReachCache } from "./reach";
+import { markConfessorOpened } from "../lib/reachOut";
+import { loadReachCache } from "./reach";
 import { subscribePush, unsubscribePush, sendDirectPush } from "../lib/pushNotifications";
 
 export const Route = createFileRoute("/track")({
@@ -185,23 +185,15 @@ function MessageItem({ msg, isNew }: { msg: ConfessorMessage; isNew?: boolean })
     setReplying(true);
     const anonId = getOrCreateAnonId();
 
-    const doWork = async () => {
-      await (markConfessorOpened as unknown as (o: { data: unknown }) => Promise<void>)(
-        { data: { threadId: msg.conversationRef, anonId } } as never
-      );
-      const remote = await (getReachThreads as unknown as (o: { data: { anonId: string } }) => Promise<RemoteThread[]>)(
-        { data: { anonId } } as never
-      );
-      saveReachCache(remote.map(remoteToLocal));
-    };
-
-    // Wait up to 10s — whether it succeeds, times out, or errors, always navigate
+    // Claim the thread — fast Supabase PATCH only, 5s max
     try {
       await Promise.race([
-        doWork(),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 20000)),
+        (markConfessorOpened as unknown as (o: { data: unknown }) => Promise<void>)(
+          { data: { threadId: msg.conversationRef, anonId } } as never
+        ),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000)),
       ]);
-    } catch { /* timeout or error — still navigate below */ }
+    } catch { /* timeout or error — navigate anyway */ }
 
     if (mountedRef.current) {
       // Always pass ref+body+senderAnonId — /reach uses cache if thread is there, stub if not
