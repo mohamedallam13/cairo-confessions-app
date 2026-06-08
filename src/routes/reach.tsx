@@ -80,7 +80,7 @@ function formatBubbleTime(iso: string): string {
   return `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · ${time}`;
 }
 
-function remoteToLocal(t: RemoteThread): Thread {
+export function remoteToLocal(t: RemoteThread): Thread {
   return {
     id: t.id,
     confessionRef: String(t.confessionSerialNum),
@@ -118,7 +118,7 @@ function resolvedConfessorAnon(thread: Thread, myAnonId: string): string | null 
 const REACH_CACHE_KEY = "cc_reach_threads";
 const REACH_SEEN_KEY  = "cc_reach_thread_seen"; // Record<threadId, sentAt of last seen msg from other party>
 
-function saveReachCache(threads: Thread[]): void {
+export function saveReachCache(threads: Thread[]): void {
   try { localStorage.setItem(REACH_CACHE_KEY, JSON.stringify(threads)); } catch { /* storage full */ }
 }
 

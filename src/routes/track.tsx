@@ -6,12 +6,14 @@ import { getOrCreateAnonId, getMyRefs, saveRefToProfile, isIngesting as checkIng
 import { pollTrackingStatuses, addAnonId, type ResolvedEntry, type ConfessorMessage } from "../lib/fetchTracking";
 import { cancelConfession } from "../lib/cancelConfession";
 import { createRecoveryToken, redeemRecoveryToken } from "../lib/recoveryToken";
+import { getThreads as getReachThreads, type RemoteThread } from "../lib/reachOut";
+import { remoteToLocal, saveReachCache } from "./reach";
 import { subscribePush, unsubscribePush, sendDirectPush } from "../lib/pushNotifications";
 
 export const Route = createFileRoute("/track")({
   validateSearch: (search: Record<string, unknown>) => ({
-    t: typeof search.t === "string" ? search.t : undefined, // transfer token (direct link)
-    recover: search.recover === "1" ? "1" : undefined,      // open recover modal directly
+    t: typeof search.t === "string" ? search.t : undefined,
+    recover: search.recover === "1" ? "1" : undefined,
   }),
   head: () => ({
     meta: [
@@ -160,10 +162,21 @@ function isValidInput(s: string) {
 
 function MessageItem({ msg }: { msg: ConfessorMessage }) {
   const navigate = useNavigate();
+  const [replying, setReplying] = useState(false);
   const d = new Date(msg.timestamp);
   const timeLabel = !isNaN(d.getTime())
     ? d.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
     : msg.timestamp;
+
+  async function handleReply() {
+    if (replying) return;
+    setReplying(true);
+    try {
+      const remote = await (getReachThreads as unknown as (o: { data: { anonId: string } }) => Promise<RemoteThread[]>)({ data: { anonId: getOrCreateAnonId() } } as never);
+      saveReachCache(remote.map(remoteToLocal));
+    } catch { /* non-fatal — reach will fetch itself */ }
+    navigate({ to: "/reach", search: { threadId: msg.conversationRef, ref: String(msg.confessionSerialNum), body: msg.message, new: undefined, serial: undefined } });
+  }
 
   return (
     <div
@@ -187,12 +200,15 @@ function MessageItem({ msg }: { msg: ConfessorMessage }) {
 
       <div className="flex items-center justify-between">
         <button
-          onClick={() => navigate({ to: "/reach", search: { threadId: msg.conversationRef, ref: String(msg.confessionSerialNum), body: msg.message, new: undefined, serial: undefined } })}
+          onClick={handleReply}
+          disabled={replying}
           className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.14em] transition-colors hover:opacity-80"
-          style={{ color: "rgba(var(--phase-accent-rgb,4,201,244),0.7)" }}
+          style={{ color: "rgba(var(--phase-accent-rgb,4,201,244),0.7)", opacity: replying ? 0.5 : 1 }}
         >
-          <Reply size={12} strokeWidth={2} />
-          Reply in Reach Out
+          {replying
+            ? <div className="w-3 h-3 rounded-full border border-current border-t-transparent animate-spin" />
+            : <Reply size={12} strokeWidth={2} />}
+          {replying ? "Loading…" : "Reply in Reach Out"}
         </button>
         <span className="text-[9px] text-cc-off/20 font-mono">{msg.conversationRef}</span>
       </div>
@@ -1391,6 +1407,7 @@ function TrackPage() {
   const [showImportModal, setShowImportModal]   = useState(false);
   const pendingToken = search.t ?? null;
 
+
   // ── Origin browser mismatch banner ──
   const [showOriginBanner, setShowOriginBanner] = useState(false);
   useEffect(() => {
@@ -1755,6 +1772,7 @@ function TrackPage() {
 
   // ── Not yet mounted — don't flash empty state before localStorage is read ──
   if (!mounted) return null;
+
 
   // ── Collection view ──
   if (myRefs.length > 0) {
