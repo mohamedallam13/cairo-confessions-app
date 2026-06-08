@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
-import { Send, ShieldCheck, Inbox, SquarePen, ArrowLeft, Trash2 } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Send, ShieldCheck, Inbox, SquarePen, ArrowLeft, Trash2, TriangleAlert } from "lucide-react";
 import { getOrCreateAnonId } from "../lib/anonIdentity";
 import { createThread, replyToThread, getThreads, deleteThread, blockSender, markConfessorOpened, reactToMessage, getDailyOutreachCount } from "../lib/reachOut";
 import type { RemoteThread } from "../lib/reachOut";
@@ -634,6 +635,8 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
   const [type, setType]     = useState<MessageType>("support");
   const [sending, setSending] = useState(false);
   const [error, setError]   = useState("");
+  const [showRulesModal, setShowRulesModal] = useState(false);
+  useEffect(() => { setShowRulesModal(true); }, []);
 
   const canSend = /^\d+$/.test(refId.trim()) && msg.trim().length >= 4;
 
@@ -704,7 +707,65 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
 
 
   return (
-    <div className="flex flex-col gap-5">
+    <>
+      {showRulesModal && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center px-4"
+          style={{ background: "rgba(5,6,6,0.75)", backdropFilter: "blur(8px)" }}
+          onClick={() => setShowRulesModal(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl p-5 flex flex-col gap-4"
+            style={{ background: "rgba(18,18,22,0.98)", border: "1px solid rgba(255,255,255,0.10)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2.5">
+              <TriangleAlert size={15} strokeWidth={2} style={{ color: "rgba(251,191,36,0.8)" }} className="shrink-0" />
+              <span className="text-[13px] font-display uppercase tracking-[0.16em]" style={{ color: "rgba(242,242,242,0.7)" }}>
+                Community Rules
+              </span>
+            </div>
+            <ul className="flex flex-col gap-1.5 text-[12.5px] leading-relaxed list-none" style={{ color: "rgba(242,242,242,0.45)" }}>
+              <li>✕ No dating or romantic requests</li>
+              <li>✕ No marriage proposals</li>
+              <li>✕ No harassment, bullying, or insults</li>
+              <li>✕ No inappropriate or explicit content</li>
+            </ul>
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }} />
+            <ul className="flex flex-col gap-1.5 text-[12.5px] leading-relaxed list-none text-right" style={{ color: "rgba(242,242,242,0.35)", direction: "rtl" }}>
+              <li>✕ ممنوع طلبات المواعدة أو العلاقات العاطفية</li>
+              <li>✕ ممنوع طلبات الخطبة أو الزواج</li>
+              <li>✕ ممنوع التحرش والتنمر والإهانة</li>
+              <li>✕ ممنوع أي محتوى مسيء أو غير لائق</li>
+            </ul>
+            <button
+              onClick={() => setShowRulesModal(false)}
+              className="w-full py-3.5 rounded-xl text-[13px] font-display uppercase tracking-[0.16em] transition-all active:scale-[0.98]"
+              style={{ background: "rgba(251,191,36,0.15)", color: "rgba(251,191,36,0.85)", border: "1px solid rgba(251,191,36,0.25)" }}
+            >
+              Understood — Proceed
+            </button>
+            <p className="text-center text-[10px]" style={{ color: "rgba(242,242,242,0.2)" }}>
+              Violations result in a permanent ban.{" "}
+              <span style={{ direction: "rtl", display: "inline" }}>المخالفات تؤدي إلى حظر دائم.</span>
+            </p>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      <div className="flex flex-col gap-5">
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded-xl"
+          style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.14)" }}
+        >
+          <TriangleAlert size={11} strokeWidth={2} className="shrink-0" style={{ color: "rgba(251,191,36,0.5)" }} />
+          <p className="text-[10.5px] leading-snug" style={{ color: "rgba(242,242,242,0.35)" }}>
+            No dating requests · No harassment · No insults —{" "}
+            <span style={{ color: "rgba(251,191,36,0.55)" }}>behave or get banned</span>
+          </p>
+        </div>
+
       <div className="flex flex-col gap-1.5">
         <input
           value={refId}
@@ -838,6 +899,7 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
         </p>
       </div>
     </div>
+    </>
   );
 }
 
