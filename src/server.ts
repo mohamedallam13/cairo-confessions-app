@@ -87,6 +87,10 @@ export default {
       if (contentType.includes("text/html")) {
         const headers = new Headers(normalized.headers);
         headers.set("Cache-Control", "no-store");
+        headers.set("X-Frame-Options", "DENY");
+        headers.set("X-Content-Type-Options", "nosniff");
+        headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+        headers.set("Content-Security-Policy", "object-src 'none'; base-uri 'self'");
         return new Response(normalized.body, {
           status: normalized.status,
           statusText: normalized.statusText,
