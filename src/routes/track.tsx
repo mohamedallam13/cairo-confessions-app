@@ -1137,7 +1137,7 @@ function ImportModal({
     let res: { ok: boolean; anonId?: string; refNums?: unknown[]; error?: string };
     try {
       const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("timeout")), 35000)
+        setTimeout(() => reject(new Error("timeout")), 60000)
       );
       res = await Promise.race([
         (redeemRecoveryToken as unknown as (opts: { data: { recoveryToken: string; refNum: string } }) => Promise<typeof res>)({ data: { recoveryToken: token, refNum: ref } } as never),

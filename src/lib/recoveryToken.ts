@@ -38,7 +38,7 @@ export const redeemRecoveryToken = createServerFn({ method: "POST" })
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "redeemRecoveryToken", recoveryToken, refNum, token }),
-        signal: AbortSignal.timeout(30000),
+        signal: AbortSignal.timeout(55000),
       });
       const text = await res.text();
       try {

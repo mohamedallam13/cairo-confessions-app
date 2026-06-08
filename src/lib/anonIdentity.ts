@@ -318,11 +318,12 @@ export function getOriginBrowser(): string | null {
  * Marks identity as introduced so the reveal modal doesn't show again.
  */
 export function adoptSession(anonId: string, refs: string[]): void {
+  // Full replacement — clear everything from the old session first
+  Object.keys(localStorage)
+    .filter(k => k.startsWith("cc_"))
+    .forEach(k => localStorage.removeItem(k));
   localStorage.setItem(KEY_ANON_ID, anonId);
-  const existing = getMyRefs();
-  const merged = [...new Set([...refs, ...existing])];
-  localStorage.setItem(KEY_MY_REFS, JSON.stringify(merged));
-  // Mark as introduced — they already know their identity from the original device
+  localStorage.setItem(KEY_MY_REFS, JSON.stringify(refs));
   localStorage.setItem("cc_identity_introduced", "1");
   dispatchIngestingChange();
 }
