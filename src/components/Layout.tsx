@@ -239,6 +239,16 @@ function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void })
 
   useEffect(() => { onClose(); }, [pathname]);
 
+  // Close when another sheet opens (e.g. events detail sheet)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if ((e as CustomEvent).detail?.from === "profile") return;
+      onClose();
+    };
+    window.addEventListener("cc:close-sheets", handler);
+    return () => window.removeEventListener("cc:close-sheets", handler);
+  }, [onClose]);
+
   useEffect(() => {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) { setPushSupported(false); return; }
     setPushEnabled(localStorage.getItem("cc_push_enabled") === "1");
@@ -444,8 +454,10 @@ import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import logoIcon from "../assets/logo-icon.png";
 import { useTimePhase } from "../hooks/useTimePhase";
 import CairoBackground from "./CairoBackground";
+import InstallBanner from "./InstallBanner";
+import PWANotifyPrompt from "./PWANotifyPrompt";
 
-const TOP_LEVEL = new Set(["/", "/track", "/confess-here", "/reach", "/login", "/home", "/events"]);
+const TOP_LEVEL = new Set(["/", "/track", "/confess-here", "/reach", "/home", "/events"]);
 
 function pageTitle(pathname: string, t: (k: string) => string): string {
   if (pathname === "/track") return t("titles.mySpace");
@@ -453,7 +465,6 @@ function pageTitle(pathname: string, t: (k: string) => string): string {
   if (pathname === "/reach") return t("titles.reachConfessor");
   if (pathname === "/home") return t("titles.feed");
   if (pathname === "/events") return t("titles.community");
-  if (pathname === "/login") return t("titles.signIn");
   if (pathname === "/profile") return t("titles.settings");
   return "";
 }
@@ -734,6 +745,8 @@ export default function Layout() {
       )}
 
       <CairoBackground phase={phase} />
+      <InstallBanner />
+      <PWANotifyPrompt canShow={!showIdentityReveal && !sessionConflict && !importInProgress} />
       <ProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} />
 
       {/* Mood picker floats top-right on landing page (header hidden there) */}
@@ -766,7 +779,7 @@ export default function Layout() {
                 <div className="flex items-center gap-2">
                   <PhasePicker currentPhase={phase} />
                   <button
-                    onClick={() => setProfileOpen(true)}
+                    onClick={() => { window.dispatchEvent(new CustomEvent("cc:close-sheets", { detail: { from: "profile" } })); setProfileOpen(true); }}
                     className="flex items-center justify-center w-9 h-9 rounded-full transition-all active:scale-90"
                     style={{ color: "rgba(242,242,242,0.45)" }}
                   >
@@ -794,7 +807,7 @@ export default function Layout() {
                 <div className="flex items-center gap-2">
                   <PhasePicker currentPhase={phase} />
                   <button
-                    onClick={() => setProfileOpen(true)}
+                    onClick={() => { window.dispatchEvent(new CustomEvent("cc:close-sheets", { detail: { from: "profile" } })); setProfileOpen(true); }}
                     className="flex items-center justify-center w-9 h-9 rounded-full transition-all active:scale-90"
                     style={{ color: "rgba(242,242,242,0.45)" }}
                   >

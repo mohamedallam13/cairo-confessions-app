@@ -20,7 +20,8 @@
 @theme inline {
   --font-display: 'Acumin Pro Condensed', 'Barlow Condensed', system-ui, sans-serif;
   --font-sans: system-ui, sans-serif;
-  --font-arabic: 'Cairo', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  --font-arabic: 'IBM Plex Sans Arabic', 'Cairo', system-ui, sans-serif;
+  --font-arabic-display: 'Cairo', 'IBM Plex Sans Arabic', system-ui, sans-serif;
   --font-serif: 'Cormorant Garamond', Georgia, serif;
 
   --radius-sm: 0.25rem;
@@ -149,7 +150,16 @@
   }
   .font-display { font-family: var(--font-display); }
   .font-arabic { font-family: var(--font-arabic); }
+  .font-arabic-display { font-family: var(--font-arabic-display); }
   .font-serif { font-family: var(--font-serif); }
+}
+
+/* Apply brand Arabic font automatically to all RTL content */
+[dir="rtl"] {
+  font-family: var(--font-arabic);
+}
+[dir="rtl"] .font-display {
+  font-family: var(--font-arabic-display);
 }
 
 /* CC concentric ring motif — partial, structural, never decorative wallpaper */

@@ -322,6 +322,27 @@ export const en = {
     chatBody: "A shared space for the Cairo Confessions community. Coming soon.",
   },
 
+  events: {
+    filterAll: "All",
+    book: "Book",
+    signInToBook: "Sign in to Book",
+    alreadyBooked: "You're booked ✓",
+    seeEvent: "See event →",
+    hosted: "Hosted by",
+    doors: "Doors",
+    payWith: "Pay with",
+    instapay: "InstaPay",
+    whatsapp: "WhatsApp",
+    iHavePaid: "I've paid",
+    bookingReceived: "Booking received",
+    bookingNote: "We'll confirm within 24h. Check back here for your status.",
+    pendingBadge: "Pending",
+    confirmedBadge: "Confirmed ✓",
+    externalTag: "Cairo",
+    cancel: "Cancel",
+    done: "Done",
+  },
+
   phases: {
     dawn: "Dawn",
     morning: "Morning",
@@ -329,6 +350,24 @@ export const en = {
     sunset: "Sunset",
     dusk: "Dusk",
     night: "Night",
+  },
+
+  pwaNotify: {
+    title: "Stay in the loop",
+    subtitle: "Know when Cairo hears you",
+    body: "Get notified the moment your confession goes live — or when someone reaches out to connect.",
+    enable: "Enable Notifications",
+    notNow: "Not now",
+  },
+
+  install: {
+    tagline: "Install App",
+    howTo: "How to install",
+    ios_step1: "Tap the Share button at the bottom of Safari",
+    ios_step2: "Select \"Add to Home Screen\"",
+    android_step1: "Tap the menu (⋮) at the top right of your browser",
+    android_step2: "Select \"Add to Home Screen\"",
+    addToHomeScreen: "Add to Home Screen",
   },
 
   errors: {
