@@ -1357,11 +1357,15 @@ function NotificationsToggle({ anonId, confessionSerialNums = [] }: { anonId: st
         });
         const j = sub.toJSON();
         const subJson = { endpoint: j.endpoint!, keys: { p256dh: j.keys!["p256dh"], auth: j.keys!["auth"] } };
-        // Merge live-loaded serial numbers (prop) with any cached ones from previous loads
-        const cacheNums = Object.values(JSON.parse(localStorage.getItem("cc_card_cache") ?? "{}") as Record<string, { serialNum?: string }>)
+        // Collect serial numbers from all sources: live state, card cache, status cache
+        const cardCacheNums = Object.values(JSON.parse(localStorage.getItem("cc_card_cache") ?? "{}") as Record<string, { serialNum?: string }>)
           .map(c => parseInt(c.serialNum ?? "", 10))
           .filter(n => !isNaN(n) && n > 0);
-        const allSerialNums = [...new Set([...confessionSerialNums, ...cacheNums])];
+        const statusCacheNums = Object.values(JSON.parse(localStorage.getItem("cc_status_cache") ?? "{}") as Record<string, { serialNum?: string }>)
+          .map(e => parseInt(e.serialNum ?? "", 10))
+          .filter(n => !isNaN(n) && n > 0);
+        const allSerialNums = [...new Set([...confessionSerialNums, ...cardCacheNums, ...statusCacheNums])];
+        console.log("[push] serial sources — prop:", confessionSerialNums, "card:", cardCacheNums, "status:", statusCacheNums);
         await (subscribePush as any)({ data: { anonId, subscription: subJson, confessionSerialNums: allSerialNums } });
         await (sendDirectPush as any)({
           data: {
