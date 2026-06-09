@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import type React from "react";
 import { Link, Outlet, useLocation, useRouter } from "@tanstack/react-router";
-import { HouseHeart, Mail, ChevronLeft, ChevronRight, BookOpen, Users, UserCircle } from "lucide-react";
-import { getIngestingRefs, getOrCreateAnonId, detectBrowser, getMyRefs } from "../lib/anonIdentity";
+import { HouseHeart, Mail, ChevronLeft, BookOpen, Users, UserCircle, Bell, BellOff, ArrowRightLeft, Trash2 } from "lucide-react";
+
+import { getIngestingRefs, getOrCreateAnonId, detectBrowser, getMyRefs, resetIdentity } from "../lib/anonIdentity";
+import { subscribePush, unsubscribePush, sendDirectPush } from "../lib/pushNotifications";
 import { getThreads } from "../lib/reachOut";
 import type { RemoteThread } from "../lib/reachOut";
 import { PHASES, type Phase, getPhaseOverride, setPhaseOverride } from "../hooks/useTimePhase";
@@ -200,18 +202,79 @@ function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
   );
 }
 
+const PUSH_VAPID_PUBLIC_KEY = "BKAhcwHJv1WCOk0ve_MM07KF2Nx0nd_DKu7qARwt-u7iuA0f6jOOPe-sPU8th5yuEqcgk2DggXHaLXIUZ9IZPNk";
+function urlBase64ToUint8Array(b64: string): Uint8Array {
+  const pad = "=".repeat((4 - (b64.length % 4)) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+}
+
 function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t, lang, setLang } = useTranslation();
+  const router = useRouter();
   const anonId = typeof window !== "undefined" ? getOrCreateAnonId() : "";
   const [copied, setCopied] = useState(false);
   const { pathname } = useLocation();
 
+  // Push notifications
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushSupported, setPushSupported] = useState(true);
+  const [pushErr, setPushErr] = useState("");
+
+  // Reset session
+  const [confirmReset, setConfirmReset] = useState(false);
+
   useEffect(() => { onClose(); }, [pathname]);
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) { setPushSupported(false); return; }
+    setPushEnabled(localStorage.getItem("cc_push_enabled") === "1");
+  }, [open]);
 
   function copyId() {
     navigator.clipboard.writeText(anonId);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  }
+
+  async function togglePush() {
+    if (pushLoading || !anonId) return;
+    setPushLoading(true);
+    setPushErr("");
+    try {
+      if (!pushEnabled) {
+        await navigator.serviceWorker.register("/sw.js");
+        const reg = await navigator.serviceWorker.ready;
+        const perm = await Notification.requestPermission();
+        if (perm !== "granted") { setPushLoading(false); return; }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(PUSH_VAPID_PUBLIC_KEY) as any });
+        const j = sub.toJSON();
+        const subJson = { endpoint: j.endpoint!, keys: { p256dh: j.keys!["p256dh"], auth: j.keys!["auth"] } };
+        const nums = [...new Set([
+          ...Object.values(JSON.parse(localStorage.getItem("cc_card_cache") ?? "{}") as Record<string, { serialNum?: string }>).map(c => parseInt(c.serialNum ?? "", 10)).filter(n => !isNaN(n) && n > 0),
+          ...Object.values(JSON.parse(localStorage.getItem("cc_status_cache") ?? "{}") as Record<string, { serialNum?: string }>).map(e => parseInt(e.serialNum ?? "", 10)).filter(n => !isNaN(n) && n > 0),
+        ])];
+        await (subscribePush as any)({ data: { anonId, subscription: subJson, confessionSerialNums: nums } });
+        await (sendDirectPush as any)({ data: { subscription: subJson, payload: { title: "Cairo Confessions", body: "Notifications enabled", url: "/track" } } });
+        localStorage.setItem("cc_push_enabled", "1");
+        setPushEnabled(true);
+      } else {
+        const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+        if (reg) { const sub = await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); }
+        await (unsubscribePush as any)({ data: { anonId } });
+        localStorage.removeItem("cc_push_enabled");
+        setPushEnabled(false);
+      }
+    } catch (e) { setPushErr(e instanceof Error ? e.message : String(e)); }
+    setPushLoading(false);
+  }
+
+  function doReset() {
+    resetIdentity();
+    onClose();
+    router.navigate({ to: "/" });
   }
 
   return (
@@ -222,54 +285,56 @@ function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void })
             className="fixed inset-0 z-[60]"
             style={{ background: "rgba(0,0,0,0.45)" }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={() => { setConfirmReset(false); onClose(); }}
           />
           <motion.div
-            className="fixed bottom-0 left-0 right-0 z-[61] max-w-lg mx-auto rounded-t-2xl"
-            style={{ background: "rgba(8,10,13,0.98)", border: "1px solid rgba(255,255,255,0.10)", borderBottom: "none", backdropFilter: "blur(24px)" }}
+            className="fixed bottom-0 left-0 right-0 z-[61] max-w-lg mx-auto rounded-t-2xl overflow-y-auto"
+            style={{ background: "rgba(8,10,13,0.98)", border: "1px solid rgba(255,255,255,0.10)", borderBottom: "none", backdropFilter: "blur(24px)", maxHeight: "90svh" }}
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 32, stiffness: 320 }}
           >
-            <div className="flex justify-center pt-3 pb-1">
+            <div className="flex justify-center pt-3 pb-1 sticky top-0" style={{ background: "rgba(8,10,13,0.98)" }}>
               <div className="w-8 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
             </div>
 
-            <div className="px-5 pb-10 pt-3 space-y-5">
+            <div className="px-5 pt-3 space-y-5" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 28px)" }}>
+
               {/* Anon identity */}
               <div>
                 <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/25 mb-2.5">{t("layout.anonIdentity")}</div>
-                <div
-                  className="flex items-center justify-between px-4 py-3 rounded-xl"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}
-                >
+                <div className="flex items-center justify-between px-4 py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}>
                   <div className="flex items-center gap-3">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0"
-                      style={{ background: "rgba(var(--phase-accent-rgb,4,201,244),0.15)", color: "var(--phase-accent,#04C9F4)" }}
-                    >
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0" style={{ background: "rgba(var(--phase-accent-rgb,4,201,244),0.15)", color: "var(--phase-accent,#04C9F4)" }}>
                       {anonId.charAt(0)}
                     </div>
                     <span className="text-cc-off/80 text-[13px] font-medium">{anonId}</span>
                   </div>
-                  <button
-                    onClick={copyId}
-                    className="text-[10px] uppercase tracking-[0.14em] transition-colors shrink-0"
-                    style={{ color: copied ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.3)" }}
-                  >
+                  <button onClick={copyId} className="text-[10px] uppercase tracking-[0.14em] transition-colors shrink-0" style={{ color: copied ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.3)" }}>
                     {copied ? t("layout.copied") : t("layout.copy")}
                   </button>
                 </div>
               </div>
 
-              {/* Language toggle */}
+              {/* Signed-in placeholder */}
+              <div className="flex items-center justify-between px-4 py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", opacity: 0.45 }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                    <UserCircle size={16} strokeWidth={1.5} style={{ color: "rgba(242,242,242,0.35)" }} />
+                  </div>
+                  <span className="text-cc-off/40 text-[13px]">{t("layout.signedInProfile")}</span>
+                </div>
+                <span className="text-[9px] uppercase tracking-[0.14em] text-cc-off/25">{t("layout.soon")}</span>
+              </div>
+
+              {/* Divider */}
+              <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }} />
+
+              {/* Language */}
               <div>
                 <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/25 mb-2.5">{t("layout.language")}</div>
                 <div className="flex gap-2">
                   {(["en", "ar"] as const).map((l) => (
-                    <button
-                      key={l}
-                      onClick={() => setLang(l)}
-                      className="flex-1 py-2 rounded-lg text-[11px] font-bold tracking-[0.08em] transition-all"
+                    <button key={l} onClick={() => setLang(l)} className="flex-1 py-2 rounded-lg text-[11px] font-bold tracking-[0.08em] transition-all"
                       style={lang === l
                         ? { background: "rgba(var(--phase-accent-rgb,4,201,244),0.15)", border: "1px solid rgba(var(--phase-accent-rgb,4,201,244),0.30)", color: "var(--phase-accent,#04C9F4)" }
                         : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(242,242,242,0.35)" }
@@ -281,32 +346,69 @@ function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void })
                 </div>
               </div>
 
-              {/* Signed-in placeholder */}
-              <div
-                className="flex items-center justify-between px-4 py-3 rounded-xl"
-                style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", opacity: 0.45 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                    style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)" }}
+              {/* Divider */}
+              <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }} />
+
+              {/* Notifications */}
+              {pushSupported && (
+                <div className="space-y-1.5">
+                  <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/25 mb-2.5">{t("profile.notifications")}</div>
+                  <button onClick={togglePush} disabled={pushLoading}
+                    className="w-full flex items-center justify-between gap-3 py-3.5 px-4 rounded-xl transition-all active:scale-[0.98]"
+                    style={{ background: pushEnabled ? "rgba(var(--phase-accent-rgb,4,201,244),0.08)" : "rgba(255,255,255,0.04)", border: pushEnabled ? "1px solid rgba(var(--phase-accent-rgb,4,201,244),0.22)" : "1px solid rgba(255,255,255,0.09)", opacity: pushLoading ? 0.6 : 1 }}
                   >
-                    <UserCircle size={16} strokeWidth={1.5} style={{ color: "rgba(242,242,242,0.35)" }} />
-                  </div>
-                  <span className="text-cc-off/40 text-[13px]">{t("layout.signedInProfile")}</span>
+                    <div className="flex items-center gap-3">
+                      {pushEnabled
+                        ? <Bell size={17} strokeWidth={1.6} style={{ color: "var(--phase-accent,#04C9F4)" }} />
+                        : <BellOff size={17} strokeWidth={1.6} style={{ color: "rgba(242,242,242,0.35)" }} />
+                      }
+                      <span className="text-[13px]" style={{ color: pushEnabled ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.55)" }}>
+                        {t("profile.pushNotifications")}
+                      </span>
+                    </div>
+                    <div className="w-10 rounded-full flex items-center px-0.5 transition-all" style={{ height: "22px", background: pushEnabled ? "rgba(var(--phase-accent-rgb,4,201,244),0.35)" : "rgba(255,255,255,0.10)" }}>
+                      <div className="w-4 h-4 rounded-full transition-all duration-200" style={{ background: pushEnabled ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.35)", transform: pushEnabled ? "translateX(20px)" : "translateX(0)" }} />
+                    </div>
+                  </button>
+                  {pushErr && <p className="text-[11px] text-red-400/70 px-1">{pushErr}</p>}
                 </div>
-                <span className="text-[9px] uppercase tracking-[0.14em] text-cc-off/25">{t("layout.soon")}</span>
+              )}
+
+              {/* Session */}
+              <div className="space-y-2.5">
+                <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/25">{t("profile.session")}</div>
+                <button
+                  onClick={() => { onClose(); router.navigate({ to: "/track", search: { t: undefined, recover: undefined } }); }}
+                  className="w-full flex items-center gap-3 py-3.5 px-4 rounded-xl transition-all active:scale-[0.98]"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)" }}
+                >
+                  <ArrowRightLeft size={17} strokeWidth={1.6} style={{ color: "rgba(242,242,242,0.35)" }} />
+                  <span className="text-[13px] text-cc-off/55">{t("profile.transferSession")}</span>
+                </button>
+
+                {!confirmReset ? (
+                  <button onClick={() => setConfirmReset(true)}
+                    className="w-full flex items-center gap-3 py-3.5 px-4 rounded-xl transition-all active:scale-[0.98]"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)" }}
+                  >
+                    <Trash2 size={17} strokeWidth={1.6} style={{ color: "rgba(242,242,242,0.35)" }} />
+                    <span className="text-[13px] text-cc-off/55">{t("profile.resetSession")}</span>
+                  </button>
+                ) : (
+                  <div className="rounded-xl px-4 py-4 space-y-3" style={{ background: "rgba(255,80,80,0.06)", border: "1px solid rgba(255,80,80,0.18)" }}>
+                    <p className="text-cc-off/50 text-[12px] leading-relaxed">{t("profile.resetConfirm")}</p>
+                    <div className="flex gap-2">
+                      <button onClick={doReset} className="flex-1 py-2.5 text-[11px] uppercase tracking-[0.14em] rounded-lg transition-all" style={{ background: "rgba(255,80,80,0.15)", border: "1px solid rgba(255,80,80,0.3)", color: "rgba(255,140,140,0.85)" }}>
+                        {t("profile.yesRemove")}
+                      </button>
+                      <button onClick={() => setConfirmReset(false)} className="flex-1 py-2.5 text-[11px] uppercase tracking-[0.14em] rounded-lg text-cc-off/35 hover:text-cc-off/60 transition-colors">
+                        {t("profile.cancel")}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Settings row */}
-              <Link
-                to="/profile"
-                className="w-full flex items-center justify-between py-3 px-4 rounded-xl transition-all active:scale-[0.98]"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-              >
-                <span className="text-[12px] uppercase tracking-[0.14em] text-cc-off/50">{t("layout.settings")}</span>
-                <ChevronRight size={14} strokeWidth={1.8} style={{ color: "rgba(242,242,242,0.25)" }} />
-              </Link>
             </div>
           </motion.div>
         </>
