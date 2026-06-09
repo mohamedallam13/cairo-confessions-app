@@ -319,12 +319,12 @@ export const ar = {
   },
 
   phases: {
-    dawn: "الفجر",
-    morning: "الصبح",
-    midday: "الضهر",
-    sunset: "الغروب",
-    dusk: "المغرب",
-    night: "الليل",
+    dawn: "فجر",
+    morning: "صبح",
+    midday: "ضهرية",
+    sunset: "عصري",
+    dusk: "شفق",
+    night: "ليل",
   },
 
   errors: {
