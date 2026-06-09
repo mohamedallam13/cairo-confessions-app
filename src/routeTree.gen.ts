@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TrackRouteImport } from './routes/track'
 import { Route as ReachRouteImport } from './routes/reach'
 import { Route as PushTestRouteImport } from './routes/push-test'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as EventsRouteImport } from './routes/events'
@@ -31,6 +32,11 @@ const ReachRoute = ReachRouteImport.update({
 const PushTestRoute = PushTestRouteImport.update({
   id: '/push-test',
   path: '/push-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/events': typeof EventsRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/push-test': typeof PushTestRoute
   '/reach': typeof ReachRoute
   '/track': typeof TrackRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/events': typeof EventsRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/push-test': typeof PushTestRoute
   '/reach': typeof ReachRoute
   '/track': typeof TrackRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/events': typeof EventsRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/push-test': typeof PushTestRoute
   '/reach': typeof ReachRoute
   '/track': typeof TrackRoute
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/events'
     | '/home'
     | '/login'
+    | '/profile'
     | '/push-test'
     | '/reach'
     | '/track'
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/events'
     | '/home'
     | '/login'
+    | '/profile'
     | '/push-test'
     | '/reach'
     | '/track'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/events'
     | '/home'
     | '/login'
+    | '/profile'
     | '/push-test'
     | '/reach'
     | '/track'
@@ -129,6 +141,7 @@ export interface RootRouteChildren {
   EventsRoute: typeof EventsRoute
   HomeRoute: typeof HomeRoute
   LoginRoute: typeof LoginRoute
+  ProfileRoute: typeof ProfileRoute
   PushTestRoute: typeof PushTestRoute
   ReachRoute: typeof ReachRoute
   TrackRoute: typeof TrackRoute
@@ -155,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/push-test'
       fullPath: '/push-test'
       preLoaderRoute: typeof PushTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -201,6 +221,7 @@ const rootRouteChildren: RootRouteChildren = {
   EventsRoute: EventsRoute,
   HomeRoute: HomeRoute,
   LoginRoute: LoginRoute,
+  ProfileRoute: ProfileRoute,
   PushTestRoute: PushTestRoute,
   ReachRoute: ReachRoute,
   TrackRoute: TrackRoute,

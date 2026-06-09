@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Library, Mail } from "lucide-react";
+import { HouseHeart, Mail, Users, BookOpen } from "lucide-react";
+import logoIcon from "../assets/logo-icon.png";
 
 function TypingBubbleIcon({ size = 18, color = "currentColor" }: { size?: number; color?: string }) {
   return (
@@ -15,8 +16,6 @@ function TypingBubbleIcon({ size = 18, color = "currentColor" }: { size?: number
   );
 }
 
-import logoIcon from "../assets/logo-icon.png";
-
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -30,113 +29,122 @@ export const Route = createFileRoute("/")({
 function Home() {
   return (
     <div
-      className="flex flex-col items-center justify-between"
-      style={{ minHeight: "100svh", padding: "0 20px" }}
+      className="flex flex-col"
+      style={{ minHeight: "100svh", padding: "0 24px", paddingTop: "env(safe-area-inset-top)" }}
     >
-      {/* Top spacer */}
-      <div />
-
-      {/* Hero — logo + brand name + tagline */}
-      <section className="flex flex-col items-center text-center gap-5">
-        <div className="flex flex-col items-center gap-3">
-          <img src={logoIcon} alt="Cairo Confessions" className="h-20 w-auto opacity-90" />
-          <div className="flex flex-col items-center gap-0.5">
-            <span
-              className="font-display text-[1.1rem] uppercase tracking-[0.3em] text-cc-off/80 font-semibold"
-            >
-              Cairo Confessions
+      {/* Brand bar */}
+      <div className="flex items-center justify-between pt-6 pb-4">
+        <div className="flex items-center gap-3">
+          <img src={logoIcon} alt="Cairo Confessions" className="h-10 w-auto opacity-90" />
+          <div className="flex flex-col gap-0">
+            <span className="font-display text-[1.05rem] uppercase tracking-[0.22em] text-cc-off/85 font-bold leading-tight">
+              Cairo
+            </span>
+            <span className="font-display text-[1.05rem] uppercase tracking-[0.22em] text-cc-off/85 font-bold leading-tight">
+              Confessions
             </span>
           </div>
         </div>
 
-        <h1 className="font-display text-[2.6rem] leading-[1.05] uppercase tracking-tight text-cc-off mt-2">
-          What Cairo<br />
-          <span style={{ color: "var(--phase-accent, #04C9F4)", transition: "color 2.5s ease" }}>can't say</span><br />
-          out loud.
-        </h1>
-
-        <p className="text-cc-off/40 text-[13.5px] leading-[1.75] max-w-[260px] font-light">
-          A safe, anonymous space for confessions from across Egypt. No name. No judgment.
-        </p>
-      </section>
-
-      {/* Actions */}
-      <section className="w-full max-w-lg space-y-3 pb-10">
-        <Link
-          to="/confess-here"
-          className="group flex items-center gap-4 w-full px-6 py-5 transition-all active:scale-[0.98]"
-          style={{
-            background: `linear-gradient(135deg, var(--phase-card-tint, rgba(4,201,244,0.10)), rgba(15,18,20,0.70))`,
-            border: "1px solid var(--phase-card-border, rgba(4,201,244,0.35))",
-            backdropFilter: "blur(12px)",
-            borderRadius: "16px",
-            transition: "background 2.5s ease, border-color 2.5s ease",
-          }}
-        >
-          <div
-            className="grid place-items-center w-10 h-10 rounded-full shrink-0"
-            style={{
-              background: "rgba(var(--phase-accent-rgb, 4,201,244), 0.15)",
-              transition: "background 2.5s ease",
-            }}
-          >
-            <TypingBubbleIcon size={18} color="var(--phase-accent, #04C9F4)" />
-          </div>
-          <div className="flex-1 text-left">
-            <div className="text-cc-off text-[15px] font-semibold leading-tight">Submit a confession</div>
-            <div className="text-cc-off/35 text-[12px] mt-0.5">Anonymous · Takes 2 minutes</div>
-          </div>
-          <div className="text-cc-off/20 group-hover:text-cc-off/50 transition-colors text-lg">›</div>
-        </Link>
-
         <Link
           to="/track"
           search={{ t: undefined, recover: undefined }}
-          className="group flex items-center gap-4 w-full px-6 py-5 transition-all active:scale-[0.98]"
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all active:scale-95"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)" }}
+        >
+          <HouseHeart size={14} strokeWidth={1.7} style={{ color: "rgba(242,242,242,0.45)" }} />
+          <span className="text-[10px] uppercase tracking-[0.18em] text-cc-off/45">My Space</span>
+        </Link>
+      </div>
+
+      {/* Hero */}
+      <section className="flex flex-col gap-5 py-4 flex-1 justify-center" style={{ maxHeight: "42vh" }}>
+        <div className="relative">
+          <div
+            className="absolute -inset-10 rounded-full blur-3xl pointer-events-none"
+            style={{ background: "radial-gradient(ellipse, rgba(var(--phase-accent-rgb,4,201,244),0.07) 0%, transparent 70%)", transition: "background 2.5s ease" }}
+          />
+          <h1 className="relative font-display text-[3rem] leading-[1.0] uppercase tracking-tight text-cc-off">
+            What Cairo<br />
+            <span style={{ color: "var(--phase-accent, #04C9F4)", transition: "color 2.5s ease" }}>can't say</span><br />
+            out loud.
+          </h1>
+        </div>
+
+        <p className="text-cc-off/35 text-[13px] leading-[1.8] max-w-[270px] font-light">
+          Anonymous confessions from across Egypt.
+          No name. No judgment. No trace.
+        </p>
+      </section>
+
+      {/* Primary CTA */}
+      <div className="py-4">
+        <Link
+          to="/confess-here"
+          className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl transition-all active:scale-[0.97]"
           style={{
-            background: `linear-gradient(135deg, var(--phase-card-tint, rgba(4,201,244,0.10)), rgba(15,18,20,0.70))`,
-            border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: "16px",
-            backdropFilter: "blur(12px)",
-            transition: "background 2.5s ease, border-color 2.5s ease",
+            background: "linear-gradient(135deg, rgba(var(--phase-accent-rgb,4,201,244),0.22), rgba(var(--phase-accent-rgb,4,201,244),0.10))",
+            border: "1px solid rgba(var(--phase-accent-rgb,4,201,244),0.40)",
+            boxShadow: "0 0 28px rgba(var(--phase-accent-rgb,4,201,244),0.10)",
+            transition: "background 2.5s ease, border-color 2.5s ease, box-shadow 2.5s ease",
           }}
         >
-          <div className="grid place-items-center w-10 h-10 rounded-full shrink-0" style={{ background: "rgba(255,255,255,0.08)" }}>
-            <Library size={17} strokeWidth={1.8} className="text-cc-off/50" />
-          </div>
-          <div className="flex-1 text-left">
-            <div className="text-cc-off/80 text-[15px] font-semibold leading-tight">My Space</div>
-            <div className="text-cc-off/30 text-[12px] mt-0.5">See your confession status and messages</div>
-          </div>
-          <div className="text-cc-off/15 group-hover:text-cc-off/40 transition-colors text-lg">›</div>
+          <TypingBubbleIcon size={17} color="var(--phase-accent, #04C9F4)" />
+          <span
+            className="font-display text-[1.05rem] uppercase tracking-[0.18em] font-bold"
+            style={{ color: "var(--phase-accent, #04C9F4)", transition: "color 2.5s ease" }}
+          >
+            Say something
+          </span>
+        </Link>
+      </div>
+
+      {/* App sections grid */}
+      <div className="grid grid-cols-3 gap-2.5 py-2">
+        <Link
+          to="/home"
+          className="flex flex-col items-center gap-2 py-4 rounded-xl transition-all active:scale-[0.97]"
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+        >
+          <BookOpen size={17} strokeWidth={1.6} style={{ color: "rgba(242,242,242,0.40)" }} />
+          <span className="text-[9.5px] uppercase tracking-[0.14em] text-cc-off/35">Confessions</span>
         </Link>
 
         <Link
           to="/reach"
           search={{ threadId: undefined, ref: undefined, body: undefined, senderAnonId: undefined, new: undefined, serial: undefined }}
-          className="group flex items-center gap-4 w-full px-6 py-5 transition-all active:scale-[0.98]"
-          style={{
-            background: `linear-gradient(135deg, var(--phase-card-tint, rgba(4,201,244,0.10)), rgba(15,18,20,0.70))`,
-            border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: "16px",
-            backdropFilter: "blur(12px)",
-            transition: "background 2.5s ease, border-color 2.5s ease",
-          }}
+          className="flex flex-col items-center gap-2 py-4 rounded-xl transition-all active:scale-[0.97]"
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
         >
-          <div className="grid place-items-center w-10 h-10 rounded-full shrink-0" style={{ background: "rgba(255,255,255,0.08)" }}>
-            <Mail size={16} strokeWidth={1.8} className="text-cc-off/50" />
-          </div>
-          <div className="flex-1 text-left">
-            <div className="text-cc-off/80 text-[15px] font-semibold leading-tight">Reach Out</div>
-            <div className="text-cc-off/30 text-[12px] mt-0.5">Send a kind, anonymous message</div>
-          </div>
-          <div className="text-cc-off/15 group-hover:text-cc-off/40 transition-colors text-lg">›</div>
+          <Mail size={17} strokeWidth={1.6} style={{ color: "rgba(242,242,242,0.40)" }} />
+          <span className="text-[9.5px] uppercase tracking-[0.14em] text-cc-off/35">Messages</span>
         </Link>
 
-        <div className="text-center pt-2">
-          <div className="text-cc-off/15 text-[10px] uppercase tracking-[0.28em]">Cairo · Since 2013</div>
+        <Link
+          to="/events"
+          className="flex flex-col items-center gap-2 py-4 rounded-xl transition-all active:scale-[0.97]"
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+        >
+          <Users size={17} strokeWidth={1.6} style={{ color: "rgba(242,242,242,0.40)" }} />
+          <span className="text-[9.5px] uppercase tracking-[0.14em] text-cc-off/35">Community</span>
+        </Link>
+      </div>
+
+      {/* Footer */}
+      <div
+        className="flex items-end justify-between py-6"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 28px)" }}
+      >
+        <div className="space-y-0.5">
+          <div className="font-arabic text-[1rem] leading-snug" style={{ color: "rgba(242,242,242,0.10)" }}>
+            ما تقوله القاهرة
+          </div>
+          <div className="text-[9.5px] uppercase tracking-[0.26em] text-cc-off/15">Cairo · Since 2013</div>
         </div>
-      </section>
+        <div className="text-[9px] uppercase tracking-[0.18em] text-cc-off/12 text-right leading-relaxed">
+          Anonymous<br />& free forever
+        </div>
+      </div>
     </div>
   );
 }

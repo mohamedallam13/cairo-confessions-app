@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import type React from "react";
 import { Link, Outlet, useLocation, useRouter } from "@tanstack/react-router";
-import { HouseHeart, Mail, ChevronLeft, Newspaper, CalendarDays } from "lucide-react";
+import { HouseHeart, Mail, ChevronLeft, ChevronRight, BookOpen, Users, UserCircle } from "lucide-react";
 import { getIngestingRefs, getOrCreateAnonId, detectBrowser, getMyRefs } from "../lib/anonIdentity";
 import { getThreads } from "../lib/reachOut";
 import type { RemoteThread } from "../lib/reachOut";
@@ -151,23 +151,15 @@ function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
     <div className="relative">
       <div className="flex items-center gap-2">
         <span className="text-[8px] uppercase tracking-[0.2em] text-cc-off/25">Mood</span>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9.5px] uppercase tracking-[0.16em] transition-all active:scale-95"
-        style={{
-          background: `rgba(${accent}, 0.12)`,
-          border: `1px solid rgba(${accent}, 0.25)`,
-          color: `rgba(${accent}, 0.85)`,
-        }}
-      >
-        <span
-          className="w-1.5 h-1.5 rounded-full"
-          style={{ background: `rgba(${accent}, 0.9)` }}
-        />
-        {override ? PHASES[override].label : `Auto · ${PHASES[currentPhase].label}`}
-      </button>
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9.5px] uppercase tracking-[0.16em] transition-all active:scale-95"
+          style={{ background: `rgba(${accent}, 0.12)`, border: `1px solid rgba(${accent}, 0.25)`, color: `rgba(${accent}, 0.85)` }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: `rgba(${accent}, 0.9)` }} />
+          {override ? PHASES[override].label : `Auto · ${PHASES[currentPhase].label}`}
+        </button>
       </div>
-
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
@@ -204,6 +196,100 @@ function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
   );
 }
 
+function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const anonId = typeof window !== "undefined" ? getOrCreateAnonId() : "";
+  const [copied, setCopied] = useState(false);
+  const { pathname } = useLocation();
+
+  useEffect(() => { onClose(); }, [pathname]);
+
+  function copyId() {
+    navigator.clipboard.writeText(anonId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            className="fixed inset-0 z-50"
+            style={{ background: "rgba(0,0,0,0.45)" }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={onClose}
+          />
+          <motion.div
+            className="fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto rounded-t-2xl"
+            style={{ background: "rgba(8,10,13,0.98)", border: "1px solid rgba(255,255,255,0.10)", borderBottom: "none", backdropFilter: "blur(24px)" }}
+            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 32, stiffness: 320 }}
+          >
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-8 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
+            </div>
+
+            <div className="px-5 pb-10 pt-3 space-y-5">
+              {/* Anon identity */}
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/25 mb-2.5">Anonymous Identity</div>
+                <div
+                  className="flex items-center justify-between px-4 py-3 rounded-xl"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0"
+                      style={{ background: "rgba(var(--phase-accent-rgb,4,201,244),0.15)", color: "var(--phase-accent,#04C9F4)" }}
+                    >
+                      {anonId.charAt(0)}
+                    </div>
+                    <span className="text-cc-off/80 text-[13px] font-medium">{anonId}</span>
+                  </div>
+                  <button
+                    onClick={copyId}
+                    className="text-[10px] uppercase tracking-[0.14em] transition-colors shrink-0"
+                    style={{ color: copied ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.3)" }}
+                  >
+                    {copied ? "Copied" : "Copy"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Signed-in placeholder */}
+              <div
+                className="flex items-center justify-between px-4 py-3 rounded-xl"
+                style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", opacity: 0.45 }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)" }}
+                  >
+                    <UserCircle size={16} strokeWidth={1.5} style={{ color: "rgba(242,242,242,0.35)" }} />
+                  </div>
+                  <span className="text-cc-off/40 text-[13px]">Signed-in profile</span>
+                </div>
+                <span className="text-[9px] uppercase tracking-[0.14em] text-cc-off/25">Soon</span>
+              </div>
+
+              {/* Settings row */}
+              <Link
+                to="/profile"
+                className="w-full flex items-center justify-between py-3 px-4 rounded-xl transition-all active:scale-[0.98]"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+              >
+                <span className="text-[12px] uppercase tracking-[0.14em] text-cc-off/50">Settings</span>
+                <ChevronRight size={14} strokeWidth={1.8} style={{ color: "rgba(242,242,242,0.25)" }} />
+              </Link>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
 function TypingBubbleIcon({ size = 22, color = "currentColor" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -227,8 +313,9 @@ function pageTitle(pathname: string): string {
   if (pathname === "/confess-here") return "Say something";
   if (pathname === "/reach") return "Reach a confessor";
   if (pathname === "/home") return "Feed";
-  if (pathname === "/events") return "Events";
+  if (pathname === "/events") return "Community";
   if (pathname === "/login") return "Sign in";
+  if (pathname === "/profile") return "Settings";
   return "";
 }
 
@@ -269,6 +356,7 @@ export default function Layout() {
   const { phase, tokens } = useTimePhase(searchStr);
   const [hasIngesting, setHasIngesting] = useState(false);
   const [reachUnread, setReachUnread] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   // Clear unread dot when entering /reach
   useEffect(() => {
@@ -506,6 +594,7 @@ export default function Layout() {
       )}
 
       <CairoBackground phase={phase} />
+      <ProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} />
 
       {/* Header — hidden on landing page */}
       {!isHome && (
@@ -524,7 +613,16 @@ export default function Layout() {
                 <Link to="/" className="flex items-center">
                   <img src={logoIcon} alt="Cairo Confessions" className="h-10 w-auto opacity-90 hover:opacity-100 transition-opacity" />
                 </Link>
-                <PhasePicker currentPhase={phase} />
+                <div className="flex items-center gap-2">
+                  <PhasePicker currentPhase={phase} />
+                  <button
+                    onClick={() => setProfileOpen(true)}
+                    className="flex items-center justify-center w-9 h-9 rounded-full transition-all active:scale-90"
+                    style={{ color: "rgba(242,242,242,0.45)" }}
+                  >
+                    <UserCircle size={22} strokeWidth={1.5} />
+                  </button>
+                </div>
               </>
             ) : (
               <>
@@ -543,7 +641,16 @@ export default function Layout() {
                 >
                   {pageTitle(pathname)}
                 </motion.div>
-                <PhasePicker currentPhase={phase} />
+                <div className="flex items-center gap-2">
+                  <PhasePicker currentPhase={phase} />
+                  <button
+                    onClick={() => setProfileOpen(true)}
+                    className="flex items-center justify-center w-9 h-9 rounded-full transition-all active:scale-90"
+                    style={{ color: "rgba(242,242,242,0.45)" }}
+                  >
+                    <UserCircle size={22} strokeWidth={1.5} />
+                  </button>
+                </div>
               </>
             )}
           </div>
@@ -588,13 +695,7 @@ export default function Layout() {
               <div className="grid h-full" style={{ gridTemplateColumns: "1fr 1fr 72px 1fr 1fr", padding: "0 6px" }}>
 
                 {/* Home */}
-                <ComingSoonTab icon={<Newspaper size={19} strokeWidth={1.6} />} label="Home" to="/home" />
-
-                {/* Events */}
-                <ComingSoonTab icon={<CalendarDays size={19} strokeWidth={1.6} />} label="Events" to="/events" />
-
-                {/* Confess spacer */}
-                <div />
+                <ComingSoonTab icon={<BookOpen size={19} strokeWidth={1.6} />} label="Confessions" to="/home" />
 
                 {/* My Space */}
                 <div className="flex items-center justify-center">
@@ -625,6 +726,12 @@ export default function Layout() {
                   </Link>
                 </div>
 
+                {/* Confess spacer */}
+                <div />
+
+                {/* Community */}
+                <ComingSoonTab icon={<Users size={19} strokeWidth={1.6} />} label="Community" to="/events" />
+
                 {/* Reach Out */}
                 <div className="flex items-center justify-center">
                   <Link
@@ -650,7 +757,7 @@ export default function Layout() {
                         <div className="absolute w-2 h-2 rounded-full bg-red-500" style={{ top: -2, right: -3 }} />
                       )}
                     </div>
-                    <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap relative z-10">Reach Out</span>
+                    <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap relative z-10">Messages</span>
                   </Link>
                 </div>
 
