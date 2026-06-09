@@ -109,6 +109,7 @@ export async function sendPushToUser(
   anonId: string,
   payload: { title: string; body: string; url?: string },
 ): Promise<void> {
+  await new Promise(r => setTimeout(r, 3000));
   const env = getCFEnv();
   const raw = await getSub(env, `sub:${anonId}`);
   console.log(`[push:send] anonId=${anonId} subFound=${!!raw} hasKV=${!!env?.PUSH_SUBS}`);
