@@ -736,7 +736,7 @@ function genRef() {
 }
 
 function ConfessPage() {
-  const { t, ta } = useTranslation();
+  const { t, ta, lang } = useTranslation();
   const displayFlow = getDisplayFlow(t, ta);
   const [stage, setStageRaw]      = useState<"write" | "chat" | "done">("write");
   const [body, setBody]           = useState("");
@@ -839,6 +839,7 @@ function ConfessPage() {
             exit={{ opacity: 0, scale: 0.97, y: -10 }}
             transition={{ duration: 0.28, ease: [0.4, 0, 1, 1] }}
             className="flex flex-col gap-5 pb-10"
+            dir={lang === "ar" ? "rtl" : "ltr"}
           >
             <div className="space-y-1">
               <div className="text-[10px] uppercase tracking-[0.28em] text-cc-off/30">{t("confess.safeHere")}</div>
