@@ -149,6 +149,7 @@ export const en = {
       "✕ ممنوع التحرش والتنمر والإهانة",
       "✕ ممنوع أي محتوى مسيء أو غير لائق",
     ],
+    conversations: "conversations",
     rateError: "You can start 3 new conversations per day. Come back tomorrow.",
     blockedError: "This confessor has chosen not to receive messages from you on this confession.",
     somethingWrong: "Something went wrong. Try again.",

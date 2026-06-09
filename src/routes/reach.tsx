@@ -975,7 +975,7 @@ function InboxTab({ threads, myAnonId, onOpen }: {
 const CLEAR_SEARCH = { threadId: undefined, ref: undefined, body: undefined, senderAnonId: undefined, new: undefined, serial: undefined } as const;
 
 function ReachPage() {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const search    = Route.useSearch();
   const navigate  = useNavigate();
 
@@ -1153,10 +1153,10 @@ function ReachPage() {
     return (
       <div className="flex flex-col gap-5 py-2">
 
-        <div className="space-y-1">
-          <div className="text-[10px] uppercase tracking-[0.28em] text-cc-off/30">— Anonymous · Reviewed</div>
+        <div className="space-y-1" dir={lang === "ar" ? "rtl" : "ltr"}>
+          <div className="text-[10px] uppercase tracking-[0.28em] text-cc-off/30">{t("reach.heading1")}</div>
           <h1 className="font-display text-[2rem] uppercase text-cc-off leading-tight">
-            Let them know<br />someone heard.
+            {t("reach.heading2")}<br />{t("reach.heading3")}
           </h1>
         </div>
 
@@ -1194,7 +1194,7 @@ function ReachPage() {
   return (
     <div className="flex flex-col gap-5 py-2">
 
-      <div className="space-y-1">
+      <div className="space-y-1" dir={lang === "ar" ? "rtl" : "ltr"}>
         <div className="text-[10px] uppercase tracking-[0.28em] text-cc-off/30">{t("reach.heading1")}</div>
         <h1 className="font-display text-[2rem] uppercase text-cc-off leading-tight">
           {t("reach.heading2")}<br />{t("reach.heading3")}
@@ -1219,7 +1219,11 @@ function ReachPage() {
           <div className="flex items-center gap-2">
             <Inbox size={12} strokeWidth={1.8} className="text-cc-off/25" />
             <span className="text-[9.5px] uppercase tracking-[0.2em] text-cc-off/25">
-              {threads.length > 0 ? `${threads.length} conversation${threads.length === 1 ? "" : "s"}` : t("reach.inbox")}
+              {threads.length > 0
+                ? lang === "ar"
+                  ? `${threads.length} ${t("reach.conversations")}`
+                  : `${threads.length} conversation${threads.length === 1 ? "" : "s"}`
+                : t("reach.inbox")}
             </span>
           </div>
           <button
