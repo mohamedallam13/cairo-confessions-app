@@ -1,0 +1,13 @@
+allowBuilds:
+  esbuild: true
+  sharp: true
+  workerd: true
+minimumReleaseAgeExclude:
+  - '@sentry-internal/browser-utils@10.57.0'
+  - '@sentry-internal/feedback@10.57.0'
+  - '@sentry-internal/replay-canvas@10.57.0'
+  - '@sentry-internal/replay@10.57.0'
+  - '@sentry/browser@10.57.0'
+  - '@sentry/cloudflare@10.57.0'
+  - '@sentry/core@10.57.0'
+  - '@sentry/react@10.57.0'
