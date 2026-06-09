@@ -307,7 +307,7 @@ function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void })
               <div className="w-8 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
             </div>
 
-            <div className="px-5 pt-3 space-y-5" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 28px)" }}>
+            <div className="px-5 pt-3 space-y-5" dir={lang === "ar" ? "rtl" : "ltr"} style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 28px)" }}>
 
               {/* Anon identity */}
               <div>
@@ -342,7 +342,7 @@ function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void })
               {/* Language */}
               <div>
                 <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/25 mb-2.5">{t("layout.language")}</div>
-                <div className="flex gap-2">
+                <div className="flex gap-2" dir="ltr">
                   {(["en", "ar"] as const).map((l) => (
                     <button key={l} onClick={() => setLang(l)} className="flex-1 py-2 rounded-lg text-[11px] font-bold tracking-[0.08em] transition-all"
                       style={lang === l
@@ -363,7 +363,7 @@ function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void })
               {pushSupported && (
                 <div className="space-y-1.5">
                   <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/25 mb-2.5">{t("profile.notifications")}</div>
-                  <button onClick={togglePush} disabled={pushLoading}
+                  <button onClick={togglePush} disabled={pushLoading} dir="ltr"
                     className="w-full flex items-center justify-between gap-3 py-3.5 px-4 rounded-xl transition-all active:scale-[0.98]"
                     style={{ background: pushEnabled ? "rgba(var(--phase-accent-rgb,4,201,244),0.08)" : "rgba(255,255,255,0.04)", border: pushEnabled ? "1px solid rgba(var(--phase-accent-rgb,4,201,244),0.22)" : "1px solid rgba(255,255,255,0.09)", opacity: pushLoading ? 0.6 : 1 }}
                   >
