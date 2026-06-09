@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { HouseHeart, Mail, Users, BookOpen } from "lucide-react";
 import logoIcon from "../assets/logo-icon.png";
+import { useTranslation } from "../lib/i18n";
 
 function TypingBubbleIcon({ size = 18, color = "currentColor" }: { size?: number; color?: string }) {
   return (
@@ -27,6 +28,8 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
+  const { t } = useTranslation();
+
   return (
     <div
       className="flex flex-col px-6"
@@ -35,7 +38,7 @@ function Home() {
       {/* Top spacer — mood picker floats here from Layout */}
       <div className="h-32" />
 
-      {/* Logo + Brand + My Space — centered hero identity */}
+      {/* Logo + Brand + My Space */}
       <section className="flex flex-col items-center text-center gap-3 pt-4 pb-6">
         <div className="relative">
           <div
@@ -45,11 +48,9 @@ function Home() {
           <img src={logoIcon} alt="Cairo Confessions" className="relative h-16 w-auto opacity-90" />
         </div>
 
-        <div className="flex flex-col items-center gap-0.5">
-          <span className="font-display text-[1.25rem] uppercase tracking-[0.24em] text-cc-off/90 font-bold leading-tight">
-            Cairo Confessions
-          </span>
-        </div>
+        <span className="font-display text-[1.25rem] uppercase tracking-[0.24em] text-cc-off/90 font-bold leading-tight">
+          Cairo Confessions
+        </span>
 
         <Link
           to="/track"
@@ -58,7 +59,7 @@ function Home() {
           style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.13)" }}
         >
           <HouseHeart size={13} strokeWidth={1.7} style={{ color: "rgba(242,242,242,0.50)" }} />
-          <span className="text-[10px] uppercase tracking-[0.18em] text-cc-off/50">My Space</span>
+          <span className="text-[10px] uppercase tracking-[0.18em] text-cc-off/50">{t("landing.mySpace")}</span>
           <span className="text-cc-off/30 text-[12px]">→</span>
         </Link>
       </section>
@@ -66,13 +67,12 @@ function Home() {
       {/* Headline + description */}
       <section className="flex flex-col gap-3 mt-6">
         <h1 className="font-display text-[3rem] leading-[1.0] uppercase tracking-tight text-cc-off">
-          What Cairo<br />
-          <span style={{ color: "var(--phase-accent, #04C9F4)", transition: "color 2.5s ease" }}>can't say</span><br />
-          out loud.
+          {t("landing.headline1")}<br />
+          <span style={{ color: "var(--phase-accent, #04C9F4)", transition: "color 2.5s ease" }}>{t("landing.headline2")}</span><br />
+          {t("landing.headline3")}
         </h1>
         <p className="text-cc-off/45 text-[13px] leading-[1.8] max-w-[270px] font-light">
-          Anonymous confessions from across Egypt.
-          No name. No judgment. No trace.
+          {t("landing.tagline")}
         </p>
       </section>
 
@@ -93,7 +93,7 @@ function Home() {
             className="font-display text-[1.05rem] uppercase tracking-[0.18em] font-bold"
             style={{ color: "var(--phase-accent, #04C9F4)", transition: "color 2.5s ease" }}
           >
-            Say something
+            {t("landing.cta")}
           </span>
         </Link>
       </div>
@@ -106,7 +106,7 @@ function Home() {
           style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.13)" }}
         >
           <BookOpen size={17} strokeWidth={1.6} style={{ color: "rgba(242,242,242,0.55)" }} />
-          <span className="text-[9.5px] uppercase tracking-[0.14em] text-cc-off/50">Confessions</span>
+          <span className="text-[9.5px] uppercase tracking-[0.14em] text-cc-off/50">{t("landing.confessions")}</span>
         </Link>
 
         <Link
@@ -116,7 +116,7 @@ function Home() {
           style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.13)" }}
         >
           <Mail size={17} strokeWidth={1.6} style={{ color: "rgba(242,242,242,0.55)" }} />
-          <span className="text-[9.5px] uppercase tracking-[0.14em] text-cc-off/50">Messages</span>
+          <span className="text-[9.5px] uppercase tracking-[0.14em] text-cc-off/50">{t("landing.messages")}</span>
         </Link>
 
         <Link
@@ -125,11 +125,11 @@ function Home() {
           style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.13)" }}
         >
           <Users size={17} strokeWidth={1.6} style={{ color: "rgba(242,242,242,0.55)" }} />
-          <span className="text-[9.5px] uppercase tracking-[0.14em] text-cc-off/50">Community</span>
+          <span className="text-[9.5px] uppercase tracking-[0.14em] text-cc-off/50">{t("landing.community")}</span>
         </Link>
       </div>
 
-      {/* Spacer — pushes footer to bottom */}
+      {/* Spacer */}
       <div className="flex-1" />
 
       {/* Footer */}
@@ -139,17 +139,14 @@ function Home() {
       >
         <div className="space-y-1">
           <div className="font-arabic text-[1rem] leading-snug" style={{ color: "rgba(242,242,242,0.35)" }}>
-            ما تقوله القاهرة
+            {t("landing.arabicTagline")}
           </div>
           <div className="text-[9.5px] uppercase tracking-[0.26em]" style={{ color: "rgba(242,242,242,0.28)" }}>
-            Cairo · Since 2013
+            {t("landing.since")}
           </div>
         </div>
-        <div
-          className="text-[9px] uppercase tracking-[0.18em] text-right leading-relaxed"
-          style={{ color: "rgba(242,242,242,0.22)" }}
-        >
-          Anonymous<br />& free forever
+        <div className="text-[9px] uppercase tracking-[0.18em] text-end leading-relaxed" style={{ color: "rgba(242,242,242,0.22)" }}>
+          {t("landing.anonymous")}<br />{t("landing.freeForever")}
         </div>
       </div>
     </div>

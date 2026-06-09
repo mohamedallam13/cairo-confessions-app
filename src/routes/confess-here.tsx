@@ -5,6 +5,7 @@ import { ArrowRight, Lock, Check, Copy, User, MessageSquare } from "lucide-react
 import freyal from "../assets/characters/freyal.png";
 import { getOrCreateAnonId, saveRefToProfile, markIngesting, clearIngesting, markIngestionFailed, removeRefFromProfile, saveSnippet, saveOriginBrowser, detectBrowser, getBrowserDetails } from "../lib/anonIdentity";
 import { submitConfession, type SubmitPayload } from "../lib/confessSubmit";
+import { useTranslation } from "../lib/i18n";
 
 export const Route = createFileRoute("/confess-here")({
   head: () => ({
@@ -25,9 +26,23 @@ interface FlowStep {
   message: string;
   type: InputType;
   options?: string[];
+  displayOptions?: string[]; // translated labels — submission always uses options[]
   skip?: boolean;
   skipLabel?: string;
   description?: string;
+}
+
+function getDisplayFlow(t: (k: string) => string, ta: (k: string) => string[]): FlowStep[] {
+  return FLOW.map((step) => {
+    const base: FlowStep = {
+      ...step,
+      message: t(`confess.q_${step.id}`),
+    };
+    if (step.description) base.description = t(`confess.q_${step.id}_desc`);
+    if (step.options) base.displayOptions = ta(`confess.opt_${step.id}`);
+    if (step.skipLabel) base.skipLabel = t("confess.noThanks");
+    return base;
+  });
 }
 
 const FLOW: FlowStep[] = [
@@ -234,29 +249,31 @@ function TypingIndicator() {
 
 // ─── Input components ──────────────────────────────────────────────────────────
 
-function ChipInput({ options, multi, onAnswer, onSkip, skipLabel }: {
-  options: string[]; multi?: boolean; onAnswer: (v: string) => void;
-  onSkip?: () => void; skipLabel?: string;
+function ChipInput({ options, displayOptions, multi, onAnswer, onSkip, skipLabel }: {
+  options: string[]; displayOptions?: string[]; multi?: boolean;
+  onAnswer: (v: string) => void; onSkip?: () => void; skipLabel?: string;
 }) {
-  const [selected, setSelected] = useState<string[]>([]);
+  const { t } = useTranslation();
+  const labels = displayOptions ?? options;
+  const [selectedIdx, setSelectedIdx] = useState<number[]>([]);
 
-  function toggle(o: string) {
+  function toggle(i: number) {
     if (multi) {
-      setSelected((s) => s.includes(o) ? s.filter((x) => x !== o) : [...s, o]);
+      setSelectedIdx((s) => s.includes(i) ? s.filter((x) => x !== i) : [...s, i]);
     } else {
-      onAnswer(o);
+      onAnswer(options[i]); // always submit English value
     }
   }
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2 overflow-y-auto max-h-[220px]" style={{ scrollbarWidth: "none" }}>
-        {options.map((o) => {
-          const active = selected.includes(o);
+        {labels.map((label, i) => {
+          const active = selectedIdx.includes(i);
           return (
             <button
-              key={o}
-              onClick={() => toggle(o)}
+              key={options[i]}
+              onClick={() => toggle(i)}
               className="px-3.5 py-2.5 text-[11px] font-medium uppercase tracking-[0.12em] transition-all active:scale-95"
               style={{
                 borderRadius: "9999px",
@@ -265,22 +282,22 @@ function ChipInput({ options, multi, onAnswer, onSkip, skipLabel }: {
                 color: active ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.5)",
               }}
             >
-              {o}
+              {label}
             </button>
           );
         })}
       </div>
       <div className="flex items-center justify-between">
-        {multi && selected.length > 0 ? (
+        {multi && selectedIdx.length > 0 ? (
           <button
-            onClick={() => onAnswer(selected.join(", "))}
+            onClick={() => onAnswer(selectedIdx.map((i) => options[i]).join(", "))}
             className="px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] rounded-full transition-all active:scale-95"
             style={{
               background: "linear-gradient(135deg, var(--phase-accent,#04C9F4), rgba(var(--phase-accent-rgb,4,201,244),0.7))",
               color: "#050606",
             }}
           >
-            Done
+            {t("confess.done")}
           </button>
         ) : <div />}
         {onSkip && (
@@ -288,7 +305,7 @@ function ChipInput({ options, multi, onAnswer, onSkip, skipLabel }: {
             onClick={onSkip}
             className="text-[10.5px] uppercase tracking-[0.16em] text-cc-off/20 hover:text-cc-off/45 transition-colors"
           >
-            {skipLabel ?? "Skip"}
+            {skipLabel ?? t("confess.skip")}
           </button>
         )}
       </div>
@@ -299,13 +316,14 @@ function ChipInput({ options, multi, onAnswer, onSkip, skipLabel }: {
 function TextInput({ onAnswer, onSkip, skipLabel }: {
   onAnswer: (v: string) => void; onSkip?: () => void; skipLabel?: string;
 }) {
+  const { t } = useTranslation();
   const [val, setVal] = useState("");
   const [err, setErr] = useState("");
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   function submit() {
     if (!val.trim()) return;
-    if (!emailRe.test(val.trim())) { setErr("That doesn't look like a valid email."); return; }
+    if (!emailRe.test(val.trim())) { setErr(t("confess.errEmail")); return; }
     onAnswer(val.trim());
   }
 
@@ -337,7 +355,7 @@ function TextInput({ onAnswer, onSkip, skipLabel }: {
               color: "#050606",
             }}
           >
-            Send
+            {t("confess.send")}
           </button>
         )}
       </div>
@@ -345,14 +363,14 @@ function TextInput({ onAnswer, onSkip, skipLabel }: {
       {onSkip && !err && (
         <div className="flex justify-end">
           <button onClick={onSkip} className="text-[10.5px] uppercase tracking-[0.16em] text-cc-off/20 hover:text-cc-off/45 transition-colors">
-            {skipLabel ?? "Skip"}
+            {skipLabel ?? t("confess.skip")}
           </button>
         </div>
       )}
       {onSkip && err && (
         <div className="flex justify-end">
           <button onClick={onSkip} className="text-[10.5px] uppercase tracking-[0.16em] text-cc-off/20 hover:text-cc-off/45 transition-colors">
-            {skipLabel ?? "Skip anyway"}
+            {skipLabel ?? t("confess.skipAnyway")}
           </button>
         </div>
       )}
@@ -361,14 +379,15 @@ function TextInput({ onAnswer, onSkip, skipLabel }: {
 }
 
 function AgeInput({ onAnswer }: { onAnswer: (v: string) => void }) {
+  const { t } = useTranslation();
   const [val, setVal] = useState("");
   const [err, setErr] = useState("");
 
   function submit() {
     const n = parseInt(val, 10);
-    if (isNaN(n) || val.trim() === "") { setErr("Please enter your age."); return; }
-    if (n < 16) { setErr("You must be at least 16 to submit a confession."); return; }
-    if (n > 99) { setErr("Please enter a valid age."); return; }
+    if (isNaN(n) || val.trim() === "") { setErr(t("confess.errAgeEmpty")); return; }
+    if (n < 16) { setErr(t("confess.errAgeMin")); return; }
+    if (n > 99) { setErr(t("confess.errAgeMax")); return; }
     onAnswer(String(n));
   }
 
@@ -390,7 +409,7 @@ function AgeInput({ onAnswer }: { onAnswer: (v: string) => void }) {
           value={val}
           onChange={(e) => { setVal(e.target.value); setErr(""); }}
           onKeyDown={(e) => e.key === "Enter" && submit()}
-          placeholder="Your age"
+          placeholder={t("confess.errAgeEmpty")}
           autoFocus
           className="flex-1 bg-transparent text-cc-off/80 placeholder:text-cc-off/20 px-3 py-2 text-[13.5px] focus:outline-none"
         />
@@ -403,7 +422,7 @@ function AgeInput({ onAnswer }: { onAnswer: (v: string) => void }) {
               color: "#050606",
             }}
           >
-            OK
+            {t("confess.ok")}
           </button>
         )}
       </div>
@@ -413,6 +432,7 @@ function AgeInput({ onAnswer }: { onAnswer: (v: string) => void }) {
 }
 
 function InfoInput({ onNext }: { onNext: () => void }) {
+  const { t } = useTranslation();
   return (
     <button
       onClick={onNext}
@@ -423,12 +443,13 @@ function InfoInput({ onNext }: { onNext: () => void }) {
         color: "rgba(242,242,242,0.7)",
       }}
     >
-      Got it
+      {t("confess.gotIt")}
     </button>
   );
 }
 
 function RefRevealInput({ refId, onNext }: { refId: string; onNext: () => void }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   function copy() {
     navigator.clipboard.writeText(refId).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
@@ -449,7 +470,7 @@ function RefRevealInput({ refId, onNext }: { refId: string; onNext: () => void }
           className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-[0.14em] px-3 py-1.5 rounded-lg transition-colors"
           style={{ color: copied ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.3)", border: "1px solid rgba(255,255,255,0.08)" }}
         >
-          <Copy size={11} /> {copied ? "Copied" : "Copy"}
+          <Copy size={11} /> {copied ? t("confess.copied") : t("confess.copy")}
         </button>
       </div>
       <button
@@ -462,17 +483,18 @@ function RefRevealInput({ refId, onNext }: { refId: string; onNext: () => void }
           color: "rgba(242,242,242,0.6)",
         }}
       >
-        I saved it — continue
+        {t("confess.iSavedIt")}
       </button>
     </div>
   );
 }
 
 function SubmitInput({ onDone, submitting }: { onDone: () => void; submitting: boolean }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-2">
       <p className="text-[10.5px] uppercase tracking-[0.16em] text-cc-off/25 text-center pb-1">
-        {submitting ? "Sending your confession…" : "Your confession has not been sent yet"}
+        {submitting ? t("confess.sendingConfession") : t("confess.notSentYet")}
       </p>
       <button
         onClick={onDone}
@@ -485,7 +507,7 @@ function SubmitInput({ onDone, submitting }: { onDone: () => void; submitting: b
           boxShadow: submitting ? "none" : "0 8px 24px -6px var(--phase-glow,rgba(4,201,244,0.35))",
         }}
       >
-        {submitting ? "Sending…" : "Send my confession"}
+        {submitting ? t("confess.sending") : t("confess.sendMyConfession")}
         {!submitting && <ArrowRight size={15} strokeWidth={2.4} />}
       </button>
     </div>
@@ -496,7 +518,8 @@ function SubmitInput({ onDone, submitting }: { onDone: () => void; submitting: b
 
 interface Message { id: string; role: "bot" | "user"; content: string; }
 
-function ChatView({ body, flow, refId, submitting, onDone }: { body: string; flow: FlowStep[]; refId: string; submitting: boolean; onDone: (answers: Record<string, string>) => void | Promise<void> }) {
+function ChatView({ body, flow, refId, submitting, onDone }: { body: string; flow: FlowStep[]; refId: string; submitting: boolean; onDone: (answers: Record<string, string>) => void | Promise<void>; }) {
+  const { t } = useTranslation();
   const [messages, setMessages]     = useState<Message[]>([]);
   const [typing, setTyping]         = useState(false);
   const [stepIdx, setStepIdx]       = useState(0);
@@ -515,13 +538,13 @@ function ChatView({ body, flow, refId, submitting, onDone }: { body: string; flo
     let t4: ReturnType<typeof setTimeout>;
     t1 = setTimeout(() => setTyping(true), 400);
     t2 = setTimeout(() => {
-      setMessages((m) => [...m, { id: "welcome-1", role: "bot", content: "Hey there. Don't worry, you're in the right place. We're here for you." }]);
+      setMessages((m) => [...m, { id: "welcome-1", role: "bot", content: t("confess.welcome1") }]);
       setTyping(false);
       t3 = setTimeout(() => setTyping(true), 300);
     }, 1100);
     t3 = setTimeout(() => setTyping(true), 1400);
     t4 = setTimeout(() => {
-      setMessages((m) => [...m, { id: "welcome-2", role: "bot", content: "This is Cairo Confessions, a community that is filled with the bright, open minds of the Egyptian people." }]);
+      setMessages((m) => [...m, { id: "welcome-2", role: "bot", content: t("confess.welcome2") }]);
       setTyping(false);
       setTimeout(() => askStep(0), 600);
     }, 2300);
@@ -591,6 +614,7 @@ function ChatView({ body, flow, refId, submitting, onDone }: { body: string; flo
               {currentStep.type === "chips" && (
                 <ChipInput
                   options={currentStep.options!}
+                  displayOptions={currentStep.displayOptions}
                   onAnswer={answer}
                   onSkip={currentStep.skip ? () => answer("") : undefined}
                   skipLabel={currentStep.skipLabel}
@@ -599,6 +623,7 @@ function ChatView({ body, flow, refId, submitting, onDone }: { body: string; flo
               {currentStep.type === "multichips" && (
                 <ChipInput
                   options={currentStep.options!}
+                  displayOptions={currentStep.displayOptions}
                   multi
                   onAnswer={answer}
                   onSkip={currentStep.skip ? () => answer("") : undefined}
@@ -635,6 +660,7 @@ function ChatView({ body, flow, refId, submitting, onDone }: { body: string; flo
 // ─── Done state ────────────────────────────────────────────────────────────────
 
 function DoneView({ refId, onAnother }: { refId: string; onAnother: () => void }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   function copy() {
     navigator.clipboard.writeText(refId).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
@@ -648,12 +674,12 @@ function DoneView({ refId, onAnother }: { refId: string; onAnother: () => void }
         <Check size={32} strokeWidth={2} style={{ color: "var(--phase-accent,#04C9F4)" }} />
       </div>
       <div className="space-y-3">
-        <div className="text-[10px] uppercase tracking-[0.3em] text-cc-off/30">— It's with us now</div>
+        <div className="text-[10px] uppercase tracking-[0.3em] text-cc-off/30">{t("confess.doneLabel")}</div>
         <h2 className="font-display text-4xl uppercase text-cc-off leading-tight">
-          You said it.<br />That took courage.
+          {t("confess.doneHeadline1")}<br />{t("confess.doneHeadline2")}
         </h2>
         <p className="text-cc-off/40 text-sm leading-relaxed max-w-xs mx-auto">
-          Your confession is in review. We read every one.
+          {t("confess.doneBody")}
         </p>
       </div>
 
@@ -666,8 +692,8 @@ function DoneView({ refId, onAnother }: { refId: string; onAnother: () => void }
           borderRadius: "14px",
         }}
       >
-        <div className="text-left">
-          <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/30 mb-1">Your reference</div>
+        <div className="text-start">
+          <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/30 mb-1">{t("confess.yourReference")}</div>
           <div className="font-display text-xl tracking-[0.22em]" style={{ color: "var(--phase-accent,#04C9F4)" }}>{refId}</div>
         </div>
         <button
@@ -679,11 +705,10 @@ function DoneView({ refId, onAnother }: { refId: string; onAnother: () => void }
             border: `1px solid ${copied ? "rgba(var(--phase-accent-rgb,4,201,244),0.35)" : "rgba(255,255,255,0.2)"}`,
           }}
         >
-          <Copy size={11} /> {copied ? "Copied" : "Copy"}
+          <Copy size={11} /> {copied ? t("confess.copied") : t("confess.copy")}
         </button>
       </div>
 
-      {/* Confess again */}
       <button
         onClick={onAnother}
         className="w-full flex items-center justify-center gap-2 px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all active:scale-[0.98]"
@@ -695,7 +720,7 @@ function DoneView({ refId, onAnother }: { refId: string; onAnother: () => void }
         }}
       >
         <MessageSquare size={13} strokeWidth={1.8} />
-        Confess something else
+        {t("confess.confessAnother")}
       </button>
     </div>
   );
@@ -711,6 +736,8 @@ function genRef() {
 }
 
 function ConfessPage() {
+  const { t, ta } = useTranslation();
+  const displayFlow = getDisplayFlow(t, ta);
   const [stage, setStageRaw]      = useState<"write" | "chat" | "done">("write");
   const [body, setBody]           = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -785,7 +812,7 @@ function ConfessPage() {
         // Confession not saved — rollback everything
         clearIngesting(ref);
         removeRefFromProfile(ref);
-        setSubmitError("Something went wrong sending your confession. Please try again.");
+        setSubmitError(t("confess.errSubmit"));
       } else {
         // Sheet succeeded, pipeline failed — mark failed, still go to done
         clearIngesting(ref);
@@ -814,9 +841,9 @@ function ConfessPage() {
             className="flex flex-col gap-5 pb-10"
           >
             <div className="space-y-1">
-              <div className="text-[10px] uppercase tracking-[0.28em] text-cc-off/30">— You're safe here</div>
+              <div className="text-[10px] uppercase tracking-[0.28em] text-cc-off/30">{t("confess.safeHere")}</div>
               <h1 className="font-display text-[2rem] uppercase text-cc-off leading-tight">
-                Say what<br />you carry.
+                {t("confess.headline1")}<br />{t("confess.headline2")}
               </h1>
             </div>
 
@@ -838,7 +865,7 @@ function ConfessPage() {
                     setStage("chat");
                   }
                 }}
-                placeholder="What's been sitting with you? Take your time..."
+                placeholder={t("confess.placeholder")}
                 rows={8}
                 className="w-full bg-transparent text-cc-off placeholder:text-cc-off/20 text-[15px] leading-[1.8] resize-none focus:outline-none font-light p-5"
               />
@@ -848,7 +875,7 @@ function ConfessPage() {
               >
                 <span className="flex items-center gap-1.5 text-[10px] text-cc-off/20 uppercase tracking-[0.18em]">
                   <Lock size={9} strokeWidth={1.8} />
-                  Anonymous
+                  {t("confess.anonymous")}
                 </span>
                 <span className="text-[11px]" style={{
                   color: body.length > 2500
@@ -877,7 +904,7 @@ function ConfessPage() {
                 transition: "background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease",
               }}
             >
-              Continue
+              {t("confess.continue")}
               <ArrowRight size={16} strokeWidth={2.4} />
             </button>
           </motion.div>
@@ -893,8 +920,8 @@ function ConfessPage() {
             className="flex flex-col gap-4"
           >
             <div className="space-y-1">
-              <div className="text-[10px] uppercase tracking-[0.28em] text-cc-off/30">— A few quick questions</div>
-              <h1 className="font-display text-[1.6rem] uppercase text-cc-off leading-tight">Help us understand.</h1>
+              <div className="text-[10px] uppercase tracking-[0.28em] text-cc-off/30">{t("confess.quickQuestions")}</div>
+              <h1 className="font-display text-[1.6rem] uppercase text-cc-off leading-tight">{t("confess.helpUs")}</h1>
             </div>
 
             <div
@@ -908,7 +935,7 @@ function ConfessPage() {
                 height: "62dvh",
               }}
             >
-              <ChatView body={body} flow={FLOW} refId={refId.current} submitting={submitting} onDone={handleDone} />
+              <ChatView body={body} flow={displayFlow} refId={refId.current} submitting={submitting} onDone={handleDone} />
             </div>
             {submitError && (
               <div className="mt-3 px-4 py-3 text-[12.5px] text-red-400 leading-relaxed" style={{ background: "rgba(239,68,68,0.08)", borderRadius: "12px", border: "1px solid rgba(239,68,68,0.2)" }}>

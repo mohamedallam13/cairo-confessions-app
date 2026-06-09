@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useTranslation } from "../lib/i18n";
 
 export const Route = createFileRoute("/home")({
   component: HomePage,
 });
 
 function HomePage() {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center px-6">
       <div
@@ -13,10 +15,8 @@ function HomePage() {
       >
         <span className="text-2xl">📰</span>
       </div>
-      <h2 className="text-cc-off text-[18px] font-semibold tracking-tight">The Feed</h2>
-      <p className="text-cc-off/40 text-[13px] leading-relaxed max-w-xs">
-        A live feed of confessions from across the city — ranked, filtered, and alive. Coming soon.
-      </p>
+      <h2 className="text-cc-off text-[18px] font-semibold tracking-tight">{t("home.title")}</h2>
+      <p className="text-cc-off/40 text-[13px] leading-relaxed max-w-xs">{t("home.body")}</p>
     </div>
   );
 }

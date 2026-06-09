@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Bell, BellOff, ArrowRightLeft, Trash2 } from "lucide-react";
 import { getOrCreateAnonId, resetIdentity } from "../lib/anonIdentity";
 import { subscribePush, unsubscribePush, sendDirectPush } from "../lib/pushNotifications";
+import { useTranslation } from "../lib/i18n";
 
 export const Route = createFileRoute("/profile")({
   component: ProfilePage,
@@ -18,6 +19,7 @@ function urlBase64ToUint8Array(b64: string): Uint8Array {
 }
 
 function NotificationsRow() {
+  const { t } = useTranslation();
   const anonId = typeof window !== "undefined" ? getOrCreateAnonId() : "";
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -93,15 +95,14 @@ function NotificationsRow() {
             : <BellOff size={17} strokeWidth={1.6} style={{ color: "rgba(242,242,242,0.35)" }} />
           }
           <span className="text-[13px]" style={{ color: enabled ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.55)" }}>
-            Push notifications
+            {t("profile.pushNotifications")}
           </span>
         </div>
         <div
-          className="w-10 h-5.5 rounded-full flex items-center px-0.5 transition-all"
+          className="w-10 rounded-full flex items-center px-0.5 transition-all"
           style={{
+            height: "22px",
             background: enabled ? "rgba(var(--phase-accent-rgb,4,201,244),0.35)" : "rgba(255,255,255,0.10)",
-            paddingTop: "2px",
-            paddingBottom: "2px",
           }}
         >
           <div
@@ -119,6 +120,7 @@ function NotificationsRow() {
 }
 
 function ResetRow() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [confirm, setConfirm] = useState(false);
 
@@ -136,29 +138,27 @@ function ResetRow() {
           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)" }}
         >
           <Trash2 size={17} strokeWidth={1.6} style={{ color: "rgba(242,242,242,0.35)" }} />
-          <span className="text-[13px] text-cc-off/55">Reset session</span>
+          <span className="text-[13px] text-cc-off/55">{t("profile.resetSession")}</span>
         </button>
       ) : (
         <div
           className="rounded-xl px-4 py-4 space-y-3"
           style={{ background: "rgba(255,80,80,0.06)", border: "1px solid rgba(255,80,80,0.18)" }}
         >
-          <p className="text-cc-off/50 text-[12px] leading-relaxed">
-            This removes your confessions and identity from this browser. You can recover them later with a transfer link.
-          </p>
+          <p className="text-cc-off/50 text-[12px] leading-relaxed">{t("profile.resetConfirm")}</p>
           <div className="flex gap-2">
             <button
               onClick={doReset}
               className="flex-1 py-2.5 text-[11px] uppercase tracking-[0.14em] rounded-lg transition-all"
               style={{ background: "rgba(255,80,80,0.15)", border: "1px solid rgba(255,80,80,0.3)", color: "rgba(255,140,140,0.85)" }}
             >
-              Yes, remove it
+              {t("profile.yesRemove")}
             </button>
             <button
               onClick={() => setConfirm(false)}
               className="flex-1 py-2.5 text-[11px] uppercase tracking-[0.14em] rounded-lg text-cc-off/35 hover:text-cc-off/60 transition-colors"
             >
-              Cancel
+              {t("profile.cancel")}
             </button>
           </div>
         </div>
@@ -168,26 +168,25 @@ function ResetRow() {
 }
 
 function ProfilePage() {
+  const { t } = useTranslation();
   const router = useRouter();
 
   return (
     <div className="space-y-8">
-      {/* Notifications */}
       <section className="space-y-2.5">
-        <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/25 px-1">Notifications</div>
+        <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/25 px-1">{t("profile.notifications")}</div>
         <NotificationsRow />
       </section>
 
-      {/* Session */}
       <section className="space-y-2.5">
-        <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/25 px-1">Session</div>
+        <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/25 px-1">{t("profile.session")}</div>
         <button
           onClick={() => router.navigate({ to: "/track", search: { t: undefined, recover: undefined } })}
           className="w-full flex items-center gap-3 py-3.5 px-4 rounded-xl transition-all active:scale-[0.98]"
           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)" }}
         >
           <ArrowRightLeft size={17} strokeWidth={1.6} style={{ color: "rgba(242,242,242,0.35)" }} />
-          <span className="text-[13px] text-cc-off/55">Transfer session</span>
+          <span className="text-[13px] text-cc-off/55">{t("profile.transferSession")}</span>
         </button>
         <ResetRow />
       </section>

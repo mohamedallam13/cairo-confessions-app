@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useTranslation } from "../lib/i18n";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Send, ShieldCheck, Inbox, SquarePen, ArrowLeft, Trash2, TriangleAlert } from "lucide-react";
@@ -171,77 +172,6 @@ function isThreadUnread(thread: Thread, myAnonId: string): boolean {
 
 type MessageType = "support" | "relate" | "admiration" | "advice" | "gratitude" | "criticism";
 
-const MESSAGE_TYPES: { key: MessageType; label: string }[] = [
-  { key: "support",    label: "Support"    },
-  { key: "relate",     label: "Relate"     },
-  { key: "admiration", label: "Admiration" },
-  { key: "advice",     label: "Advice"     },
-  { key: "gratitude",  label: "Gratitude"  },
-  { key: "criticism",  label: "Criticism"  },
-];
-
-const QUICK: Record<MessageType, string[]> = {
-  support: [
-    "I read yours and felt less alone.",
-    "You're braver than you know.",
-    "I've been there too. It gets softer.",
-    "Sending you warmth from across the city.",
-    "You don't have to carry it alone.",
-    "Thank you for saying this out loud.",
-    "Whatever happens next, you're not invisible.",
-    "I hope someone holds this with you.",
-  ],
-  relate: [
-    "This could have been written by me.",
-    "I know this feeling more than you'd think.",
-    "I've been exactly where you are.",
-    "You're not the only one carrying this.",
-    "Same city, same weight.",
-    "This hit closer to home than I expected.",
-    "You're not alone in this, even if it feels that way.",
-    "I've never told anyone either.",
-  ],
-  admiration: [
-    "It takes real courage to say this out loud.",
-    "Thank you for sharing this with the city.",
-    "You put into words what many of us can't.",
-    "This stayed with me.",
-    "I see you.",
-    "You're stronger than you think.",
-    "This is the kind of honesty the world needs more of.",
-    "I respect you for this.",
-  ],
-  advice: [
-    "Have you talked to someone about this?",
-    "Sometimes the first step is just saying it — you've done that.",
-    "Whatever you decide, make sure it's for you.",
-    "Give yourself permission to not have it figured out.",
-    "You deserve support beyond this screen.",
-    "One step at a time.",
-    "Be gentle with yourself through this.",
-    "This might be worth writing down somewhere private too.",
-  ],
-  gratitude: [
-    "Thank you for being honest.",
-    "Posts like yours make this city feel less cold.",
-    "You reminded me I'm not alone either.",
-    "This made my day a little more human.",
-    "Thank you for trusting the city with this.",
-    "You gave words to something I couldn't.",
-    "This matters more than you know.",
-    "Glad you shared it.",
-  ],
-  criticism: [
-    "I think there's another side worth considering.",
-    "Have you thought about how this affects others?",
-    "I disagree, but I respect that you shared.",
-    "This made me uncomfortable, but I'm listening.",
-    "I hope you find a different path forward.",
-    "There's more nuance here than it seems.",
-    "I'd encourage you to reflect on this more.",
-    "I hear you, but I don't fully agree.",
-  ],
-};
 
 // ─── Thread view ───────────────────────────────────────────────────────────────
 
@@ -253,6 +183,7 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
   onUpdated: (t: Thread) => void;
   onDeleted: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const REACTION_EMOJIS = ["❤️", "😢", "🤗", "😮", "🙏", "✨"];
   const PAGE_SIZE = 30;
   const [reply, setReply] = useState("");
@@ -334,11 +265,11 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
     if (!res.success && res.error === "rate_limited") {
       onUpdated(originalThread);
       setReply(newMsg.content);
-      setSendError("You can start 3 new conversations per day. Come back tomorrow.");
+      setSendError(t("reach.rateError"));
     }
   }
 
-  const otherLabel = perspective === "sender" ? "Confessor" : "Them";
+  const otherLabel = perspective === "sender" ? t("reach.confessor") : t("reach.them");
   const confessorHasReplied = thread.messages.some((m) => m.from === "confessor");
   const senderLocked = perspective === "sender" && !confessorHasReplied;
 
@@ -373,7 +304,7 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
               className="text-[10px]"
               style={{ color: "rgba(242,242,242,0.45)" }}
             >
-              Reach out to: #{thread.confessionRef}
+              {t("reach.reachOutTo")}{thread.confessionRef}
             </span>
           </div>
         </div>
@@ -408,10 +339,10 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
           style={{ background: "rgba(10,12,16,0.92)", border: "1px solid rgba(220,60,60,0.18)", backdropFilter: "blur(16px)" }}
         >
           <div className="space-y-1">
-            <p className="text-[13px] font-medium" style={{ color: "rgba(242,242,242,0.80)" }}>Delete this conversation?</p>
+            <p className="text-[13px] font-medium" style={{ color: "rgba(242,242,242,0.80)" }}>{t("reach.deleteConvo")}</p>
             {perspective === "confessor" && (
               <p className="text-[11px] leading-relaxed" style={{ color: "rgba(242,242,242,0.35)" }}>
-                Block prevents this person from messaging you on this confession again.
+                {t("reach.blockNote")}
               </p>
             )}
           </div>
@@ -461,7 +392,7 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
             className="self-center text-[10px] uppercase tracking-[0.14em] px-4 py-1.5 rounded-full transition-colors"
             style={{ color: "rgba(242,242,242,0.30)", border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.04)" }}
           >
-            Load earlier
+            {t("reach.loadEarlier")}
           </button>
         )}
         {displayMessages.map((m) => {
@@ -555,7 +486,7 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
 
               <div className="flex items-center gap-1.5 px-1">
                 <span className="text-[9px] uppercase tracking-[0.12em] text-cc-off/20">
-                  {isMine ? "You" : otherLabel}
+                  {isMine ? t("reach.you") : otherLabel}
                 </span>
                 <span className="text-cc-off/15 text-[9px]">·</span>
                 <span className="text-[9px] text-cc-off/20">
@@ -578,7 +509,7 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
           }}
         >
           <span className="text-[11px] uppercase tracking-[0.16em]" style={{ color: "rgba(242,242,242,0.25)" }}>
-            Waiting for their reply
+            {t("reach.waitingReply")}
           </span>
         </div>
       ) : (
@@ -594,7 +525,7 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
             value={reply}
             onChange={(e) => setReply(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-            placeholder="Write a reply..."
+            placeholder={t("reach.writeReply")}
             rows={3}
             className="w-full bg-transparent text-cc-off placeholder:text-cc-off/20 text-[13.5px] leading-[1.75] p-4 resize-none focus:outline-none font-light"
           />
@@ -602,7 +533,7 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
             className="flex items-center justify-between px-4 pb-3"
             style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
           >
-            <span className="text-[9.5px] uppercase tracking-[0.14em] text-cc-off/18">Anonymous · Reviewed</span>
+            <span className="text-[9.5px] uppercase tracking-[0.14em] text-cc-off/18">{t("reach.anonymousReviewed")}</span>
             <button
               onClick={send}
               disabled={!reply.trim()}
@@ -629,6 +560,26 @@ function ThreadView({ thread, perspective, myAnonId, onBack, onUpdated, onDelete
 // ─── New message tab ───────────────────────────────────────────────────────────
 
 function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed = 0 }: { onSent: (t: Thread) => void; prefilledSerial?: string; reachLimitHit?: boolean; reachDailyUsed?: number }) {
+  const { t, ta } = useTranslation();
+
+  const MESSAGE_TYPES: { key: MessageType; label: string }[] = [
+    { key: "support",    label: t("reach.typeSupport")    },
+    { key: "relate",     label: t("reach.typeRelate")     },
+    { key: "admiration", label: t("reach.typeAdmiration") },
+    { key: "advice",     label: t("reach.typeAdvice")     },
+    { key: "gratitude",  label: t("reach.typeGratitude")  },
+    { key: "criticism",  label: t("reach.typeCriticism")  },
+  ];
+
+  const QUICK: Record<MessageType, string[]> = {
+    support:    ta("reach.quick_support"),
+    relate:     ta("reach.quick_relate"),
+    admiration: ta("reach.quick_admiration"),
+    advice:     ta("reach.quick_advice"),
+    gratitude:  ta("reach.quick_gratitude"),
+    criticism:  ta("reach.quick_criticism"),
+  };
+
   const [refId, setRefId]   = useState(prefilledSerial ?? "");
   const [msg, setMsg]       = useState("");
   const [email, setEmail]   = useState("");
@@ -679,8 +630,8 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
         senderEmail: email.trim(),
       } });
       if (!res.success) {
-        if (res.error === "rate_limited") throw new Error("You can start 3 new conversations per day. Come back tomorrow.");
-        if (res.error === "blocked") throw new Error("This confessor has chosen not to receive messages from you on this confession.");
+        if (res.error === "rate_limited") throw new Error(t("reach.rateError"));
+        if (res.error === "blocked") throw new Error(t("reach.blockedError"));
         throw new Error(res.error);
       }
 
@@ -722,14 +673,11 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
             <div className="flex items-center gap-2.5">
               <TriangleAlert size={15} strokeWidth={2} style={{ color: "rgba(251,191,36,0.8)" }} className="shrink-0" />
               <span className="text-[13px] font-display uppercase tracking-[0.16em]" style={{ color: "rgba(242,242,242,0.7)" }}>
-                Community Rules
+                {t("reach.rulesTitle")}
               </span>
             </div>
             <ul className="flex flex-col gap-1.5 text-[12.5px] leading-relaxed list-none" style={{ color: "rgba(242,242,242,0.45)" }}>
-              <li>✕ No dating or romantic requests</li>
-              <li>✕ No marriage proposals</li>
-              <li>✕ No harassment, bullying, or insults</li>
-              <li>✕ No inappropriate or explicit content</li>
+              {ta("reach.rules_en").map((r, i) => <li key={i}>{r}</li>)}
             </ul>
             <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }} />
             <ul className="flex flex-col gap-1.5 text-[12.5px] leading-relaxed list-none text-right" style={{ color: "rgba(242,242,242,0.35)", direction: "rtl" }}>
@@ -743,11 +691,11 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
               className="w-full py-3.5 rounded-xl text-[13px] font-display uppercase tracking-[0.16em] transition-all active:scale-[0.98]"
               style={{ background: "rgba(251,191,36,0.15)", color: "rgba(251,191,36,0.85)", border: "1px solid rgba(251,191,36,0.25)" }}
             >
-              Understood — Proceed
+              {t("reach.rulesUnderstood")}
             </button>
             <p className="text-center text-[10px]" style={{ color: "rgba(242,242,242,0.2)" }}>
-              Violations result in a permanent ban.{" "}
-              <span style={{ direction: "rtl", display: "inline" }}>المخالفات تؤدي إلى حظر دائم.</span>
+              {t("reach.rulesBan")}{" "}
+              <span style={{ direction: "rtl", display: "inline" }}>{t("reach.rulesBanAr")}</span>
             </p>
           </div>
         </div>,
@@ -761,8 +709,8 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
         >
           <TriangleAlert size={11} strokeWidth={2} className="shrink-0" style={{ color: "rgba(251,191,36,0.5)" }} />
           <p className="text-[10.5px] leading-snug" style={{ color: "rgba(242,242,242,0.35)" }}>
-            No dating requests · No harassment · No insults —{" "}
-            <span style={{ color: "rgba(251,191,36,0.55)" }}>behave or get banned</span>
+            {t("reach.noDating")}{" "}
+            <span style={{ color: "rgba(251,191,36,0.55)" }}>{t("reach.behave")}</span>
           </p>
         </div>
 
@@ -770,7 +718,7 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
         <input
           value={refId}
           onChange={(e) => setRefId(e.target.value)}
-          placeholder="Confession number — e.g. 1042"
+          placeholder={t("reach.confessionNumber")}
           className="w-full bg-transparent text-cc-off placeholder:text-cc-off/25 px-4 py-3.5 font-display tracking-widest text-[14px] focus:outline-none"
           style={{
             background: "rgba(255,255,255,0.10)",
@@ -788,10 +736,10 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
         {/* Suggestions title + type selector */}
         <div className="flex flex-col gap-2 px-4 pt-3 pb-1">
           <div className="flex items-center justify-between">
-            <span className="text-[9.5px] uppercase tracking-[0.18em] text-cc-off/20">Suggestions</span>
+            <span className="text-[9.5px] uppercase tracking-[0.18em] text-cc-off/20">{t("reach.suggestions")}</span>
             <span className="text-[9.5px] tracking-[0.08em]">
               <span style={{ color: reachLimitHit ? "rgba(248,113,113,0.7)" : "var(--phase-accent,#04C9F4)" }}>{reachDailyUsed}</span>
-              <span style={{ color: "rgba(242,242,242,0.20)" }}> / 3 today</span>
+              <span style={{ color: "rgba(242,242,242,0.20)" }}> {t("reach.today")}</span>
             </span>
           </div>
           <div className="flex items-center gap-1.5" style={{ overflowX: "auto", scrollbarWidth: "none" }}>
@@ -830,15 +778,15 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
         {reachLimitHit ? (
           <div className="flex flex-col items-center justify-center gap-2 py-8 px-6 text-center">
             <p className="text-[12.5px] leading-relaxed" style={{ color: "rgba(242,242,242,0.35)" }}>
-              You've started 3 conversations today.
+              {t("reach.rateLimit1")}
             </p>
-            <p className="text-[11px]" style={{ color: "rgba(242,242,242,0.22)" }}>Come back tomorrow.</p>
+            <p className="text-[11px]" style={{ color: "rgba(242,242,242,0.22)" }}>{t("reach.rateLimit2")}</p>
           </div>
         ) : (
           <textarea
             value={msg}
             onChange={(e) => setMsg(e.target.value)}
-            placeholder="Write whatever you feel..."
+            placeholder={t("reach.writeFeel")}
             rows={5}
             className="w-full bg-transparent text-cc-off placeholder:text-cc-off/20 text-[14px] leading-[1.75] p-4 resize-none focus:outline-none font-light"
           />
@@ -850,7 +798,7 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="Your email — optional, so they can reply"
+        placeholder={t("reach.emailOptional")}
         className="w-full bg-transparent text-cc-off/70 placeholder:text-cc-off/20 px-4 py-3 text-[13px] focus:outline-none font-light"
         style={{
           background: "rgba(255,255,255,0.06)",
@@ -885,7 +833,7 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
           transition: "background 0.3s ease, box-shadow 0.3s ease, color 0.3s ease",
         }}
       >
-        {sending ? "Sending…" : "Send message"}
+        {sending ? t("reach.sending") : t("reach.sendMessage")}
         {sending
           ? <div className="w-4 h-4 rounded-full border-2 border-current/30 border-t-current animate-spin" />
           : <Send size={15} strokeWidth={2.4} />
@@ -895,7 +843,7 @@ function NewMessageTab({ onSent, prefilledSerial, reachLimitHit, reachDailyUsed 
       <div className="flex items-start gap-2.5 px-1">
         <ShieldCheck size={13} strokeWidth={1.8} className="text-cc-off/20 shrink-0 mt-0.5" />
         <p className="text-[11px] leading-relaxed" style={{ color: "rgba(242,242,242,0.18)" }}>
-          All messages are reviewed before delivery. Harmful messages will not be sent.
+          {t("reach.safetyNote")}
         </p>
       </div>
     </div>
@@ -911,31 +859,32 @@ function InboxTab({ threads, myAnonId, onOpen }: {
   myAnonId: string;
   onOpen: (t: Thread) => void;
 }) {
+  const { t } = useTranslation();
 
   if (threads.length === 0) return (
     <div className="flex flex-col items-center text-center gap-4 py-16">
       <Inbox size={32} strokeWidth={1.4} className="text-cc-off/15" />
-      <p className="text-[12px] uppercase tracking-[0.2em] text-cc-off/20">Nothing here yet</p>
+      <p className="text-[12px] uppercase tracking-[0.2em] text-cc-off/20">{t("reach.nothingHere")}</p>
     </div>
   );
 
   return (
     <div>
-      {threads.map((t, i) => {
-        const perspective: Sender = t.anonId === myAnonId ? "sender" : "confessor";
-        const unread = isThreadUnread(t, myAnonId);
-        const last = t.messages[t.messages.length - 1];
-        const lastFrom = last ? (last.from === perspective ? "You" : "Them") : null;
-        const isReactionActivity = last && t.lastActivity > last.sentAt && t.lastReactedMessageId != null;
+      {threads.map((thread, i) => {
+        const perspective: Sender = thread.anonId === myAnonId ? "sender" : "confessor";
+        const unread = isThreadUnread(thread, myAnonId);
+        const last = thread.messages[thread.messages.length - 1];
+        const lastFrom = last ? (last.from === perspective ? t("reach.you") : t("reach.them")) : null;
+        const isReactionActivity = last && thread.lastActivity > last.sentAt && thread.lastReactedMessageId != null;
         const lastReactedMsg = isReactionActivity
-          ? t.messages.find((m) => m.id === t.lastReactedMessageId) ?? null
+          ? thread.messages.find((m) => m.id === thread.lastReactedMessageId) ?? null
           : null;
         const reactionEmojis = lastReactedMsg ? Object.keys(lastReactedMsg.reactions).join(" ") : null;
 
         return (
           <button
-            key={t.id}
-            onClick={() => onOpen(t)}
+            key={thread.id}
+            onClick={() => onOpen(thread)}
             className="w-full text-left flex items-center gap-3 px-4 py-3.5 transition-colors"
             style={{
               borderBottom: i < threads.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
@@ -955,8 +904,8 @@ function InboxTab({ threads, myAnonId, onOpen }: {
                 style={{ color: unread ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.55)" }}
               >
                 {perspective === "sender"
-                  ? anonInitials(resolvedConfessorAnon(t, myAnonId) ?? myAnonId)
-                  : anonInitials(t.anonId)}
+                  ? anonInitials(resolvedConfessorAnon(thread, myAnonId) ?? myAnonId)
+                  : anonInitials(thread.anonId)}
               </span>
             </div>
 
@@ -966,20 +915,20 @@ function InboxTab({ threads, myAnonId, onOpen }: {
               <div className="flex items-baseline justify-between gap-2">
                 <span className="text-[12px] truncate" style={{ color: "rgba(242,242,242,0.92)" }}>
                   {perspective === "sender"
-                    ? (resolvedConfessorAnon(t, myAnonId) ?? "···")
-                    : t.anonId}
+                    ? (resolvedConfessorAnon(thread, myAnonId) ?? "···")
+                    : thread.anonId}
                 </span>
                 <span
                   className="text-[10px] shrink-0 tabular-nums"
                   style={{ color: unread ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.40)" }}
                 >
-                  {formatMsgTime(t.lastActivity)}
+                  {formatMsgTime(thread.lastActivity)}
                 </span>
               </div>
 
               {/* Row 2: serial as subject */}
               <span className="text-[11px]" style={{ color: "rgba(242,242,242,0.85)" }}>
-                Reach out to: #{t.confessionRef}
+                {t("reach.reachOutTo")}{thread.confessionRef}
               </span>
 
               {/* Row 3: preview + unread dot */}
@@ -1026,6 +975,7 @@ function InboxTab({ threads, myAnonId, onOpen }: {
 const CLEAR_SEARCH = { threadId: undefined, ref: undefined, body: undefined, senderAnonId: undefined, new: undefined, serial: undefined } as const;
 
 function ReachPage() {
+  const { t } = useTranslation();
   const search    = Route.useSearch();
   const navigate  = useNavigate();
 
@@ -1229,7 +1179,7 @@ function ReachPage() {
             >
               <ArrowLeft size={16} strokeWidth={1.8} />
             </button>
-            <span className="text-[9.5px] uppercase tracking-[0.2em] text-cc-off/25">New Message</span>
+            <span className="text-[9.5px] uppercase tracking-[0.2em] text-cc-off/25">{t("reach.newMessage")}</span>
           </div>
           <div className="p-3">
             <NewMessageTab prefilledSerial={serial} onSent={handleSent} reachLimitHit={reachLimitHit} reachDailyUsed={reachDailyUsed} />
@@ -1245,9 +1195,9 @@ function ReachPage() {
     <div className="flex flex-col gap-5 py-2">
 
       <div className="space-y-1">
-        <div className="text-[10px] uppercase tracking-[0.28em] text-cc-off/30">— Anonymous · Reviewed</div>
+        <div className="text-[10px] uppercase tracking-[0.28em] text-cc-off/30">{t("reach.heading1")}</div>
         <h1 className="font-display text-[2rem] uppercase text-cc-off leading-tight">
-          Let them know<br />someone heard.
+          {t("reach.heading2")}<br />{t("reach.heading3")}
         </h1>
       </div>
 
@@ -1269,7 +1219,7 @@ function ReachPage() {
           <div className="flex items-center gap-2">
             <Inbox size={12} strokeWidth={1.8} className="text-cc-off/25" />
             <span className="text-[9.5px] uppercase tracking-[0.2em] text-cc-off/25">
-              {threads.length > 0 ? `${threads.length} conversation${threads.length === 1 ? "" : "s"}` : "Inbox"}
+              {threads.length > 0 ? `${threads.length} conversation${threads.length === 1 ? "" : "s"}` : t("reach.inbox")}
             </span>
           </div>
           <button
@@ -1282,7 +1232,7 @@ function ReachPage() {
             }}
           >
             <SquarePen size={12} strokeWidth={2} />
-            <span className="text-[9.5px] uppercase tracking-[0.14em] font-semibold">New</span>
+            <span className="text-[9.5px] uppercase tracking-[0.14em] font-semibold">{t("reach.new")}</span>
           </button>
         </div>
 

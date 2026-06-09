@@ -6,10 +6,12 @@ import { getIngestingRefs, getOrCreateAnonId, detectBrowser, getMyRefs } from ".
 import { getThreads } from "../lib/reachOut";
 import type { RemoteThread } from "../lib/reachOut";
 import { PHASES, type Phase, getPhaseOverride, setPhaseOverride } from "../hooks/useTimePhase";
+import { useTranslation } from "../lib/i18n";
 
 // ─── Identity reveal modal ───────────────────────────────────────────────────
 
 function IdentityRevealModal({ anonId, onDone }: { anonId: string; onDone: () => void }) {
+  const { t } = useTranslation();
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -20,7 +22,7 @@ function IdentityRevealModal({ anonId, onDone }: { anonId: string; onDone: () =>
         style={{ background: "rgba(12,15,18,0.97)", border: "1px solid rgba(255,255,255,0.10)" }}
       >
         <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-[0.28em] text-cc-off/30">You are now</p>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-cc-off/30">{t("layout.youAreNow")}</p>
           <p
             className="font-display text-[1.4rem] uppercase tracking-[0.12em]"
             style={{ color: "var(--phase-accent,#04C9F4)" }}
@@ -30,7 +32,7 @@ function IdentityRevealModal({ anonId, onDone }: { anonId: string; onDone: () =>
         </div>
 
         <p className="text-cc-off/45 text-[13px] leading-[1.8]">
-          Anonymous. Safe. Yours.<br />
+          {t("layout.anonymous")}<br />
           No name. No judgment. Just you.
         </p>
 
@@ -42,7 +44,7 @@ function IdentityRevealModal({ anonId, onDone }: { anonId: string; onDone: () =>
             color: "#050606",
           }}
         >
-          That's me
+          →
         </button>
       </div>
     </div>
@@ -82,6 +84,7 @@ function SessionConflictModal({
   onDismiss: () => void;
   onRecover: () => void;
 }) {
+  const { t } = useTranslation();
   const fromLabel = incomingBrowser ? ` from ${incomingBrowser}` : "";
 
   return (
@@ -100,7 +103,7 @@ function SessionConflictModal({
           <p className="text-cc-off/70 text-[14px] leading-[1.7]">
             was here{fromLabel}.
           </p>
-          <p className="text-cc-off text-[16px] font-semibold">Is that you?</p>
+          <p className="text-cc-off text-[16px] font-semibold">{t("layout.isThatYou")}</p>
           {caseType === "case3" && (
             <p className="text-cc-off/35 text-[12px]">You're currently <span className="font-display" style={{ color: "rgba(var(--phase-accent-rgb,4,201,244),0.6)" }}>{localAnonId}</span>.</p>
           )}
@@ -111,13 +114,13 @@ function SessionConflictModal({
             className="w-full py-3 font-display text-[11px] uppercase tracking-[0.18em] rounded-xl transition-all active:scale-95"
             style={{ background: "linear-gradient(135deg, var(--phase-accent,#04C9F4), rgba(var(--phase-accent-rgb,4,201,244),0.75))", color: "#050606" }}
           >
-            Yes — Recover My Space →
+            {t("layout.recoverMySpace")}
           </button>
           <button
             onClick={onDismiss}
             className="w-full py-2 text-[10px] uppercase tracking-[0.14em] text-cc-off/25 hover:text-cc-off/50 transition-colors"
           >
-            {caseType === "case1" ? "Not me — Start fresh" : "Not me — Keep mine"}
+            {caseType === "case1" ? t("layout.notMeStartFresh") : t("layout.notMeKeepMine")}
           </button>
         </div>
       </div>
@@ -128,6 +131,7 @@ function SessionConflictModal({
 const PHASE_ORDER: Phase[] = ["dawn", "morning", "midday", "sunset", "dusk", "night"];
 
 function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
+  const { t } = useTranslation();
   const [override, setOverride] = useState<Phase | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -150,21 +154,21 @@ function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
   return (
     <div className="relative">
       <div className="flex items-center gap-2">
-        <span className="text-[8px] uppercase tracking-[0.2em] text-cc-off/25">Mood</span>
+        <span className="text-[8px] uppercase tracking-[0.2em] text-cc-off/25">{t("layout.mood")}</span>
         <button
           onClick={() => setOpen((o) => !o)}
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9.5px] uppercase tracking-[0.16em] transition-all active:scale-95"
           style={{ background: `rgba(${accent}, 0.12)`, border: `1px solid rgba(${accent}, 0.25)`, color: `rgba(${accent}, 0.85)` }}
         >
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: `rgba(${accent}, 0.9)` }} />
-          {override ? PHASES[override].label : `Auto · ${PHASES[currentPhase].label}`}
+          {override ? PHASES[override].label : `${t("layout.auto")} · ${PHASES[currentPhase].label}`}
         </button>
       </div>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
-            className="absolute right-0 top-full mt-2 z-50 rounded-xl overflow-hidden py-1 min-w-[120px]"
+            className="absolute end-0 top-full mt-2 z-50 rounded-xl overflow-hidden py-1 min-w-[120px]"
             style={{ background: "rgba(10,12,15,0.96)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(16px)" }}
           >
             <button
@@ -173,8 +177,8 @@ function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
               style={{ color: !override ? "rgba(242,242,242,0.85)" : "rgba(242,242,242,0.35)" }}
             >
               <span className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }} />
-              Auto · {PHASES[currentPhase].label}
-              {!override && <span className="ml-auto text-[8px] opacity-50">✓</span>}
+              {t("layout.auto")} · {PHASES[currentPhase].label}
+              {!override && <span className="ms-auto text-[8px] opacity-50">✓</span>}
             </button>
             <div className="mx-3 my-1 border-t border-white/8" />
             {PHASE_ORDER.map((p) => (
@@ -186,7 +190,7 @@ function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
               >
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: `rgba(${PHASES[p].accentRgb}, 0.8)` }} />
                 {PHASES[p].label}
-                {override === p && <span className="ml-auto text-[8px] opacity-60">✓</span>}
+                {override === p && <span className="ms-auto text-[8px] opacity-60">✓</span>}
               </button>
             ))}
           </div>
@@ -197,6 +201,7 @@ function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
 }
 
 function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t, lang, setLang } = useTranslation();
   const anonId = typeof window !== "undefined" ? getOrCreateAnonId() : "";
   const [copied, setCopied] = useState(false);
   const { pathname } = useLocation();
@@ -232,7 +237,7 @@ function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void })
             <div className="px-5 pb-10 pt-3 space-y-5">
               {/* Anon identity */}
               <div>
-                <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/25 mb-2.5">Anonymous Identity</div>
+                <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/25 mb-2.5">{t("layout.anonIdentity")}</div>
                 <div
                   className="flex items-center justify-between px-4 py-3 rounded-xl"
                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)" }}
@@ -251,8 +256,28 @@ function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void })
                     className="text-[10px] uppercase tracking-[0.14em] transition-colors shrink-0"
                     style={{ color: copied ? "var(--phase-accent,#04C9F4)" : "rgba(242,242,242,0.3)" }}
                   >
-                    {copied ? "Copied" : "Copy"}
+                    {copied ? t("layout.copied") : t("layout.copy")}
                   </button>
+                </div>
+              </div>
+
+              {/* Language toggle */}
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.2em] text-cc-off/25 mb-2.5">{t("layout.language")}</div>
+                <div className="flex gap-2">
+                  {(["en", "ar"] as const).map((l) => (
+                    <button
+                      key={l}
+                      onClick={() => setLang(l)}
+                      className="flex-1 py-2 rounded-lg text-[11px] font-bold tracking-[0.08em] transition-all"
+                      style={lang === l
+                        ? { background: "rgba(var(--phase-accent-rgb,4,201,244),0.15)", border: "1px solid rgba(var(--phase-accent-rgb,4,201,244),0.30)", color: "var(--phase-accent,#04C9F4)" }
+                        : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(242,242,242,0.35)" }
+                      }
+                    >
+                      {l === "en" ? "English" : "العربية"}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -268,9 +293,9 @@ function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void })
                   >
                     <UserCircle size={16} strokeWidth={1.5} style={{ color: "rgba(242,242,242,0.35)" }} />
                   </div>
-                  <span className="text-cc-off/40 text-[13px]">Signed-in profile</span>
+                  <span className="text-cc-off/40 text-[13px]">{t("layout.signedInProfile")}</span>
                 </div>
-                <span className="text-[9px] uppercase tracking-[0.14em] text-cc-off/25">Soon</span>
+                <span className="text-[9px] uppercase tracking-[0.14em] text-cc-off/25">{t("layout.soon")}</span>
               </div>
 
               {/* Settings row */}
@@ -279,7 +304,7 @@ function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void })
                 className="w-full flex items-center justify-between py-3 px-4 rounded-xl transition-all active:scale-[0.98]"
                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
               >
-                <span className="text-[12px] uppercase tracking-[0.14em] text-cc-off/50">Settings</span>
+                <span className="text-[12px] uppercase tracking-[0.14em] text-cc-off/50">{t("layout.settings")}</span>
                 <ChevronRight size={14} strokeWidth={1.8} style={{ color: "rgba(242,242,242,0.25)" }} />
               </Link>
             </div>
@@ -308,14 +333,14 @@ import CairoBackground from "./CairoBackground";
 
 const TOP_LEVEL = new Set(["/", "/track", "/confess-here", "/reach", "/login", "/home", "/events"]);
 
-function pageTitle(pathname: string): string {
-  if (pathname === "/track") return "My Space";
-  if (pathname === "/confess-here") return "Say something";
-  if (pathname === "/reach") return "Reach a confessor";
-  if (pathname === "/home") return "Feed";
-  if (pathname === "/events") return "Community";
-  if (pathname === "/login") return "Sign in";
-  if (pathname === "/profile") return "Settings";
+function pageTitle(pathname: string, t: (k: string) => string): string {
+  if (pathname === "/track") return t("titles.mySpace");
+  if (pathname === "/confess-here") return t("titles.saySomething");
+  if (pathname === "/reach") return t("titles.reachConfessor");
+  if (pathname === "/home") return t("titles.feed");
+  if (pathname === "/events") return t("titles.community");
+  if (pathname === "/login") return t("titles.signIn");
+  if (pathname === "/profile") return t("titles.settings");
   return "";
 }
 
@@ -354,6 +379,7 @@ export default function Layout() {
   const router = useRouter();
   const isTopLevel = TOP_LEVEL.has(pathname);
   const { phase, tokens } = useTimePhase(searchStr);
+  const { t } = useTranslation();
   const [hasIngesting, setHasIngesting] = useState(false);
   const [reachUnread, setReachUnread] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -649,7 +675,7 @@ export default function Layout() {
                   animate={{ opacity: 1 }}
                   className="text-[11px] uppercase tracking-[0.22em] text-cc-off/30"
                 >
-                  {pageTitle(pathname)}
+                  {pageTitle(pathname, t)}
                 </motion.div>
                 <div className="flex items-center gap-2">
                   <PhasePicker currentPhase={phase} />
@@ -705,7 +731,7 @@ export default function Layout() {
               <div className="grid h-full" style={{ gridTemplateColumns: "1fr 1fr 72px 1fr 1fr", padding: "0 6px" }}>
 
                 {/* Home */}
-                <ComingSoonTab icon={<BookOpen size={19} strokeWidth={1.6} />} label="Confessions" to="/home" />
+                <ComingSoonTab icon={<BookOpen size={19} strokeWidth={1.6} />} label={t("nav.confessions")} to="/home" />
 
                 {/* My Space */}
                 <div className="flex items-center justify-center">
@@ -732,7 +758,7 @@ export default function Layout() {
                         <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
                       )}
                     </div>
-                    <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap relative z-10">My Space</span>
+                    <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap relative z-10">{t("nav.mySpace")}</span>
                   </Link>
                 </div>
 
@@ -740,7 +766,7 @@ export default function Layout() {
                 <div />
 
                 {/* Community */}
-                <ComingSoonTab icon={<Users size={19} strokeWidth={1.6} />} label="Community" to="/events" />
+                <ComingSoonTab icon={<Users size={19} strokeWidth={1.6} />} label={t("nav.community")} to="/events" />
 
                 {/* Reach Out */}
                 <div className="flex items-center justify-center">
@@ -767,7 +793,7 @@ export default function Layout() {
                         <div className="absolute w-2 h-2 rounded-full bg-red-500" style={{ top: -2, right: -3 }} />
                       )}
                     </div>
-                    <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap relative z-10">Messages</span>
+                    <span className="text-[7px] font-bold uppercase tracking-[0.08em] whitespace-nowrap relative z-10">{t("nav.messages")}</span>
                   </Link>
                 </div>
 

@@ -21,6 +21,7 @@ if (typeof window !== "undefined" && SENTRY_DSN) {
 import appCss from "../styles.css?url";
 import Layout from "../components/Layout";
 import { LOGO_BASE64 } from "../assets/logoBase64";
+import { LangProvider } from "../lib/i18n";
 
 function NotFoundComponent() {
   return (
@@ -161,7 +162,9 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <Layout />
+      <LangProvider>
+        <Layout />
+      </LangProvider>
     </QueryClientProvider>
   );
 }
