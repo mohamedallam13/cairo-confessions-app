@@ -144,6 +144,7 @@ function SessionConflictModal({
 const PHASE_ORDER: Phase[] = ["dawn", "morning", "midday", "sunset", "dusk", "night"];
 
 function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
+  const { t } = useTranslation();
   const [override, setOverride] = useState<Phase | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -173,7 +174,7 @@ function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
           style={{ background: `rgba(${accent}, 0.12)`, border: `1px solid rgba(${accent}, 0.25)`, color: `rgba(${accent}, 0.85)` }}
         >
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: `rgba(${accent}, 0.9)` }} />
-          {override ? PHASES[override].label : `Auto · ${PHASES[currentPhase].label}`}
+          {override ? t(`phases.${override}`) : `Auto · ${t(`phases.${currentPhase}`)}`}
         </button>
       </div>
       {open && (
@@ -189,7 +190,7 @@ function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
               style={{ color: !override ? "rgba(242,242,242,0.85)" : "rgba(242,242,242,0.35)" }}
             >
               <span className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }} />
-              Auto · {PHASES[currentPhase].label}
+              Auto · {t(`phases.${currentPhase}`)}
               {!override && <span className="ms-auto text-[8px] opacity-50">✓</span>}
             </button>
             <div className="mx-3 my-1 border-t border-white/8" />
@@ -201,7 +202,7 @@ function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
                 style={{ color: override === p ? `rgba(${PHASES[p].accentRgb}, 0.9)` : "rgba(242,242,242,0.45)" }}
               >
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: `rgba(${PHASES[p].accentRgb}, 0.8)` }} />
-                {PHASES[p].label}
+                {t(`phases.${p}`)}
                 {override === p && <span className="ms-auto text-[8px] opacity-60">✓</span>}
               </button>
             ))}

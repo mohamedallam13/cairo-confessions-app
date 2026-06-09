@@ -318,6 +318,15 @@ export const ar = {
     chatBody: "مساحة مشتركة لمجتمع Cairo Confessions. قريباً.",
   },
 
+  phases: {
+    dawn: "الفجر",
+    morning: "الصبح",
+    midday: "الضهر",
+    sunset: "الغروب",
+    dusk: "المغرب",
+    night: "الليل",
+  },
+
   errors: {
     notFoundTitle: "٤٠٤",
     notFoundHeading: "الصفحة مش موجودة",

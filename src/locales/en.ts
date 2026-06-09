@@ -318,6 +318,15 @@ export const en = {
     chatBody: "A shared space for the Cairo Confessions community. Coming soon.",
   },
 
+  phases: {
+    dawn: "Dawn",
+    morning: "Morning",
+    midday: "Midday",
+    sunset: "Sunset",
+    dusk: "Dusk",
+    night: "Night",
+  },
+
   errors: {
     notFoundTitle: "404",
     notFoundHeading: "Page not found",
