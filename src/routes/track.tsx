@@ -1490,6 +1490,42 @@ function TrackPage() {
     setPollingRefs(new Set());
     if (!res.ok || !res.entries) return;
 
+    // Compute push events here — before state update, outside React updater
+    const pushEvents: Array<{ newStatus: string; rejectionReasons?: string }> = [];
+    if (localStorage.getItem("cc_push_enabled") === "1") {
+      const NOTIFIABLE = new Set(["scheduled", "posted", "shadowed", "rejected", "skipped"]);
+      let notifiedMap: Record<string, string> = {};
+      let msgNotifiedMap: Record<string, number> = {};
+      try { notifiedMap  = JSON.parse(localStorage.getItem("cc_push_notified")     ?? "{}"); } catch { /* ignore */ }
+      try { msgNotifiedMap = JSON.parse(localStorage.getItem("cc_push_msg_notified") ?? "{}"); } catch { /* ignore */ }
+
+      for (const [refNum, entry] of Object.entries(res.entries)) {
+        if (!entry) continue;
+        const oldCache = getStatusCache(refNum);
+
+        const newTopStatus = entry.status[0]?.status;
+        if (newTopStatus && NOTIFIABLE.has(newTopStatus)) {
+          const oldStatus = oldCache?.statuses[0]?.status;
+          if (newTopStatus !== oldStatus && newTopStatus !== notifiedMap[refNum]) {
+            notifiedMap[refNum] = newTopStatus;
+            pushEvents.push({ newStatus: newTopStatus, rejectionReasons: entry.status[0]?.rejectionReasons ?? undefined });
+          }
+        }
+
+        const oldMsgCount = oldCache?.messages?.length ?? 0;
+        const newMsgCount = entry.messages?.length ?? 0;
+        const lastNotifiedCount = msgNotifiedMap[refNum] ?? 0;
+        if (newMsgCount > oldMsgCount && newMsgCount > lastNotifiedCount) {
+          msgNotifiedMap[refNum] = newMsgCount;
+          const newCount = newMsgCount - oldMsgCount;
+          pushEvents.push({ newStatus: "new_message", rejectionReasons: newCount > 1 ? `${newCount} new messages` : undefined });
+        }
+      }
+
+      localStorage.setItem("cc_push_notified",     JSON.stringify(notifiedMap));
+      localStorage.setItem("cc_push_msg_notified", JSON.stringify(msgNotifiedMap));
+    }
+
     setResolvedResults((prev) => {
       const next = { ...prev };
       const polledAt = new Date().toISOString();
@@ -1507,50 +1543,6 @@ function TrackPage() {
         const confessionTimestamp = entry.confessionsArray[0]?.timestamp ?? "";
         if (entry.serialNum) saveCardCache(refNum, { serialNum: entry.serialNum, timestamp: confessionTimestamp });
         if (snippet) saveSnippet(refNum, snippet);
-
-        if (localStorage.getItem("cc_push_enabled") === "1") {
-          const oldCache = getStatusCache(refNum);
-          const localAnonId = getOrCreateAnonId();
-
-          // Push on confession status change
-          const NOTIFIABLE = new Set(["scheduled", "posted", "shadowed", "rejected", "skipped"]);
-          const newTopStatus = entry.status[0]?.status;
-          if (newTopStatus && NOTIFIABLE.has(newTopStatus)) {
-            const oldStatus = oldCache?.statuses[0]?.status;
-            let notifiedMap: Record<string, string> = {};
-            try { notifiedMap = JSON.parse(localStorage.getItem("cc_push_notified") ?? "{}"); } catch { /* ignore */ }
-            if (newTopStatus !== oldStatus && newTopStatus !== notifiedMap[refNum]) {
-              notifiedMap[refNum] = newTopStatus;
-              localStorage.setItem("cc_push_notified", JSON.stringify(notifiedMap));
-              const rejectionReasons = entry.status[0]?.rejectionReasons ?? undefined;
-              (sendStatusChangePush as unknown as (o: { data: unknown }) => Promise<unknown>)(
-                { data: { anonId: localAnonId, newStatus: newTopStatus, rejectionReasons } }
-              ).catch(() => { /* best-effort */ });
-            }
-          }
-
-          // Push on new message request in Messages tab
-          const oldMsgCount = oldCache?.messages?.length ?? 0;
-          const newMsgCount = entry.messages?.length ?? 0;
-          if (newMsgCount > oldMsgCount) {
-            let msgNotifiedMap: Record<string, number> = {};
-            try { msgNotifiedMap = JSON.parse(localStorage.getItem("cc_push_msg_notified") ?? "{}"); } catch { /* ignore */ }
-            const lastNotifiedCount = msgNotifiedMap[refNum] ?? 0;
-            if (newMsgCount > lastNotifiedCount) {
-              msgNotifiedMap[refNum] = newMsgCount;
-              localStorage.setItem("cc_push_msg_notified", JSON.stringify(msgNotifiedMap));
-              const newCount = newMsgCount - oldMsgCount;
-              (sendStatusChangePush as unknown as (o: { data: unknown }) => Promise<unknown>)({
-                data: {
-                  anonId: localAnonId,
-                  newStatus: "new_message",
-                  rejectionReasons: newCount > 1 ? `${newCount} new messages` : undefined,
-                },
-              }).catch(() => { /* best-effort */ });
-            }
-          }
-        }
-
         saveStatusCache(refNum, {
           statuses: entry.status,
           serialNum: entry.serialNum,
@@ -1562,6 +1554,16 @@ function TrackPage() {
       }
       return next;
     });
+
+    // Fire push notifications after state update, with confirmed anonId
+    if (pushEvents.length > 0) {
+      const localAnonId = getOrCreateAnonId();
+      for (const event of pushEvents) {
+        (sendStatusChangePush as unknown as (o: { data: unknown }) => Promise<unknown>)(
+          { data: { anonId: localAnonId, ...event } }
+        ).catch(() => { /* best-effort */ });
+      }
+    }
 
     setActiveRef((cur) => {
       if (cur && res.entries) {
