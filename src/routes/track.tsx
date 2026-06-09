@@ -1323,7 +1323,7 @@ function urlBase64ToUint8Array(b64: string): Uint8Array {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 
-function NotificationsToggle({ anonId }: { anonId: string }) {
+function NotificationsToggle({ anonId, confessionSerialNums = [] }: { anonId: string; confessionSerialNums?: number[] }) {
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [supported, setSupported] = useState(true);
@@ -1357,12 +1357,12 @@ function NotificationsToggle({ anonId }: { anonId: string }) {
         });
         const j = sub.toJSON();
         const subJson = { endpoint: j.endpoint!, keys: { p256dh: j.keys!["p256dh"], auth: j.keys!["auth"] } };
-        // Collect confession serial numbers so the server can map them for createThread push
-        const cardCache = JSON.parse(localStorage.getItem("cc_card_cache") ?? "{}") as Record<string, { serialNum?: string }>;
-        const confessionSerialNums = Object.values(cardCache)
+        // Merge live-loaded serial numbers (prop) with any cached ones from previous loads
+        const cacheNums = Object.values(JSON.parse(localStorage.getItem("cc_card_cache") ?? "{}") as Record<string, { serialNum?: string }>)
           .map(c => parseInt(c.serialNum ?? "", 10))
-          .filter(n => !isNaN(n));
-        await (subscribePush as any)({ data: { anonId, subscription: subJson, confessionSerialNums } });
+          .filter(n => !isNaN(n) && n > 0);
+        const allSerialNums = [...new Set([...confessionSerialNums, ...cacheNums])];
+        await (subscribePush as any)({ data: { anonId, subscription: subJson, confessionSerialNums: allSerialNums } });
         await (sendDirectPush as any)({
           data: {
             subscription: subJson,
@@ -1874,7 +1874,7 @@ function TrackPage() {
         >
           <p className="text-[9px] uppercase tracking-[0.2em] text-cc-off/60 text-center font-semibold">My Space Settings</p>
           <div className="space-y-2">
-            <NotificationsToggle anonId={anonId} />
+            <NotificationsToggle anonId={anonId} confessionSerialNums={Object.values(resolvedResults).map(r => parseInt(r.serialNum, 10)).filter(n => !isNaN(n) && n > 0)} />
             <button
               onClick={() => setShowImportModal(true)}
               className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-display text-[11px] uppercase tracking-[0.18em] transition-all active:scale-[0.98]"
@@ -1959,7 +1959,7 @@ function TrackPage() {
       >
         <p className="text-[9px] uppercase tracking-[0.2em] text-cc-off/60 text-center font-semibold">My Space Settings</p>
         <div className="space-y-2">
-          <NotificationsToggle anonId={anonId} />
+          <NotificationsToggle anonId={anonId} confessionSerialNums={Object.values(resolvedResults).map(r => parseInt(r.serialNum, 10)).filter(n => !isNaN(n) && n > 0)} />
           <button
             onClick={() => setShowImportModal(true)}
             className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-display text-[11px] uppercase tracking-[0.18em] transition-all active:scale-[0.98]"
