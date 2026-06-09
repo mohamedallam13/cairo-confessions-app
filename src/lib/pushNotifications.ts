@@ -195,7 +195,8 @@ export async function sendPushToAll(env: CFEnv): Promise<void> {
         JSON.stringify({ title: "Cairo Confessions", body: "Something is waiting for you." }),
         { TTL: 86400 },
       );
-    } catch {
+    } catch (err) {
+      console.error(`[push] sendPushToAll failed for ${name}:`, err);
       await env.PUSH_SUBS.delete(name);
     }
   });

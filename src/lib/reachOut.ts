@@ -181,7 +181,7 @@ export const createThread = createServerFn({ method: "POST" })
             body: JSON.stringify({ token, action: "buildTracking" }),
             signal: AbortSignal.timeout(25000),
           });
-        } catch { /* non-fatal */ }
+        } catch (e) { console.error("[createThread] buildTracking failed:", e); }
       }
     }
 
@@ -431,5 +431,5 @@ export const triggerBuildTracking = createServerFn({ method: "POST" })
         body: JSON.stringify({ token, action: "buildTracking" }),
         signal: AbortSignal.timeout(25000),
       });
-    } catch { /* non-fatal */ }
+    } catch (e) { console.error("[triggerBuildTracking] failed:", e); }
   });

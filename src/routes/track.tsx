@@ -193,7 +193,7 @@ function MessageItem({ msg, isNew }: { msg: ConfessorMessage; isNew?: boolean })
         ),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000)),
       ]);
-    } catch { /* timeout or error — navigate anyway */ }
+    } catch (e) { console.warn("[track] markConfessorOpened timed out or failed:", e); }
 
     if (mountedRef.current) {
       // Always pass ref+body+senderAnonId — /reach uses cache if thread is there, stub if not
@@ -305,7 +305,7 @@ function ResultView({
     try {
       const map: Record<string, number> = JSON.parse(localStorage.getItem("cc_track_msgs_seen_count") ?? "{}");
       return map[refNum] ?? 0;
-    } catch { return 0; }
+    } catch (e) { console.warn("[track] failed to read cc_track_msgs_seen_count:", e); return 0; }
   }
 
   function markMsgsSeen() {
@@ -313,7 +313,7 @@ function ResultView({
       const map: Record<string, number> = JSON.parse(localStorage.getItem("cc_track_msgs_seen_count") ?? "{}");
       map[refNum] = r.messages.length;
       localStorage.setItem("cc_track_msgs_seen_count", JSON.stringify(map));
-    } catch {}
+    } catch (e) { console.warn("[track] failed to write cc_track_msgs_seen_count:", e); }
   }
 
   // Frozen at mount — highlights stay visible for this session even after markMsgsSeen fires
@@ -1496,8 +1496,8 @@ function TrackPage() {
       const NOTIFIABLE = new Set(["scheduled", "posted", "shadowed", "rejected", "skipped"]);
       let notifiedMap: Record<string, string> = {};
       let msgNotifiedMap: Record<string, number> = {};
-      try { notifiedMap  = JSON.parse(localStorage.getItem("cc_push_notified")     ?? "{}"); } catch { /* ignore */ }
-      try { msgNotifiedMap = JSON.parse(localStorage.getItem("cc_push_msg_notified") ?? "{}"); } catch { /* ignore */ }
+      try { notifiedMap  = JSON.parse(localStorage.getItem("cc_push_notified")     ?? "{}"); } catch (e) { console.warn("[push] failed to parse cc_push_notified", e); }
+      try { msgNotifiedMap = JSON.parse(localStorage.getItem("cc_push_msg_notified") ?? "{}"); } catch (e) { console.warn("[push] failed to parse cc_push_msg_notified", e); }
 
       for (const [refNum, entry] of Object.entries(res.entries)) {
         if (!entry) continue;
@@ -1561,7 +1561,7 @@ function TrackPage() {
       for (const event of pushEvents) {
         (sendStatusChangePush as unknown as (o: { data: unknown }) => Promise<unknown>)(
           { data: { anonId: localAnonId, ...event } }
-        ).catch(() => { /* best-effort */ });
+        ).catch((e) => { console.error("[push] sendStatusChangePush failed", e); });
       }
     }
 
@@ -1716,7 +1716,8 @@ function TrackPage() {
       } else {
         setResult("not_found");
       }
-    } catch {
+    } catch (e) {
+      console.error("[track] poll failed:", e);
       setResult("not_found");
     }
   }
