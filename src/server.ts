@@ -73,8 +73,9 @@ export default {
   },
 
   async fetch(request: Request, env: unknown, ctx: unknown) {
-    // Expose CF bindings to createServerFn handlers via globalThis.__env__
+    // Expose CF bindings and execution context to createServerFn handlers via globalThis
     (globalThis as Record<string, unknown>)["__env__"] = env;
+    (globalThis as Record<string, unknown>)["__ctx__"] = ctx;
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

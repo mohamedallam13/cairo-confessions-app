@@ -13,6 +13,8 @@ type CFEnv = {
   VAPID_PRIVATE_KEY: string;
 };
 
+type CFCtx = { waitUntil(p: Promise<unknown>): void };
+
 export type PushSubscriptionJSON = {
   endpoint: string;
   keys: { p256dh: string; auth: string };
@@ -20,6 +22,10 @@ export type PushSubscriptionJSON = {
 
 function getCFEnv(): CFEnv {
   return (globalThis as Record<string, unknown>)["__env__"] as CFEnv;
+}
+
+function getCFCtx(): CFCtx | undefined {
+  return (globalThis as Record<string, unknown>)["__ctx__"] as CFCtx | undefined;
 }
 
 // In-memory fallback for local dev — lives on globalThis to survive Vite module re-evaluations
@@ -83,6 +89,7 @@ export const sendDirectPush = createServerFn({ method: "POST" }).handler(async (
   await webpush.sendNotification(
     subscription as Parameters<typeof webpush.sendNotification>[0],
     JSON.stringify(payload),
+    { TTL: 86400 },
   );
   return { ok: true };
 });
@@ -104,10 +111,27 @@ export async function sendPushToUser(
     await webpush.sendNotification(
       sub as Parameters<typeof webpush.sendNotification>[0],
       JSON.stringify(payload),
+      { TTL: 86400 },
     );
-  } catch {
-    await deleteSub(env, `sub:${anonId}`);
+  } catch (err) {
+    const code = (err as Record<string, unknown>)?.statusCode as number | undefined;
+    console.error(`[push] sendPushToUser failed for ${anonId}: statusCode=${code}`, err);
+    // Only remove subscription on explicit "subscription gone" responses
+    if (code === 410 || code === 404) {
+      await deleteSub(env, `sub:${anonId}`);
+    }
   }
+}
+
+/** Fire push and extend CF Worker lifetime via waitUntil so it completes after response is sent. */
+export function scheduleDirectPush(
+  anonId: string,
+  payload: { title: string; body: string; url?: string },
+): void {
+  const p = sendPushToUser(anonId, payload).catch((e) => {
+    console.error(`[push] scheduleDirectPush failed for ${anonId}:`, e);
+  });
+  getCFCtx()?.waitUntil(p);
 }
 
 export async function sendPushToAll(env: CFEnv): Promise<void> {
@@ -127,6 +151,7 @@ export async function sendPushToAll(env: CFEnv): Promise<void> {
       await webpush.sendNotification(
         sub as Parameters<typeof webpush.sendNotification>[0],
         JSON.stringify({ title: "Cairo Confessions", body: "Something is waiting for you." }),
+        { TTL: 86400 },
       );
     } catch {
       await env.PUSH_SUBS.delete(name);

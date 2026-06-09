@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { sendPushToUser } from "./pushNotifications";
+import { scheduleDirectPush } from "./pushNotifications";
 import { sanitizeText } from "./sanitize";
 
 function getSupabaseHeaders() {
@@ -272,7 +272,7 @@ export const replyToThread = createServerFn({ method: "POST" })
           const body = p.fromRole === "confessor"
             ? `Message from Confessor: #${thread.confession_serial_num}`
             : `Message from ${p.anonId.slice(0, 10)}…`;
-          sendPushToUser(recipientId, { title: "Cairo Confessions", body, url: `/reach?threadId=${p.threadId}` }).catch(() => {});
+          scheduleDirectPush(recipientId, { title: "Cairo Confessions", body, url: `/reach?threadId=${p.threadId}` });
         }
       }
     }
