@@ -229,6 +229,8 @@ export const ar = {
     metaDesc: "شوف فين اعترافك.",
     tabStatus: "الحالة",
     tabMessages: "الرسائل",
+    yourId: "هويتك",
+    findButton: "دور",
     searchPlaceholder: "أدخل رقم مرجع",
     noResults: "مفيش اعترافات.",
     replyInReach: "رد في الرسائل",

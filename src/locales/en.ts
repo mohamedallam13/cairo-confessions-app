@@ -229,6 +229,8 @@ export const en = {
     metaDesc: "See where your confession is.",
     tabStatus: "Status",
     tabMessages: "Messages",
+    yourId: "Your ID",
+    findButton: "Find",
     searchPlaceholder: "Enter a reference number",
     noResults: "No confessions found.",
     replyInReach: "Reply in Reach Out",

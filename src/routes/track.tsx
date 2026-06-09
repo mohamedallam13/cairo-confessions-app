@@ -829,6 +829,7 @@ function ConfessionCard({ refNum, result, onOpen }: { refNum: string; result: Tr
 // ─── Search bar ───────────────────────────────────────────────────────────────
 
 function RefSearchBar({ onSearch }: { onSearch: (ref: string) => void }) {
+  const { t } = useTranslation();
   const [input, setInput] = useState("");
   const [err, setErr]     = useState("");
 
@@ -836,14 +837,14 @@ function RefSearchBar({ onSearch }: { onSearch: (ref: string) => void }) {
     const target = input.trim().toUpperCase();
     setErr("");
     if (!isValidInput(target)) {
-      setErr("Must be 8 characters — letters and numbers only.");
+      setErr(t("track.mustBe8Chars"));
       return;
     }
     onSearch(target);
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" dir="ltr">
       <div
         className="flex gap-2 p-1.5"
         style={{
@@ -857,7 +858,7 @@ function RefSearchBar({ onSearch }: { onSearch: (ref: string) => void }) {
           value={input}
           onChange={(e) => { setInput(e.target.value.toUpperCase()); setErr(""); }}
           onKeyDown={(e) => e.key === "Enter" && lookup()}
-          placeholder="Enter a reference number"
+          placeholder={t("track.searchPlaceholder")}
           maxLength={8}
           className="flex-1 bg-transparent text-cc-off placeholder:text-cc-off/20 px-3 py-2 font-display uppercase tracking-widest text-[14px] focus:outline-none"
         />
@@ -872,7 +873,7 @@ function RefSearchBar({ onSearch }: { onSearch: (ref: string) => void }) {
           }}
         >
           <Search size={13} strokeWidth={2.4} />
-          Find
+          {t("track.findButton")}
         </button>
       </div>
       {err && <p className="text-[11px] px-1" style={{ color: "rgba(240,100,100,0.8)" }}>{err}</p>}
@@ -929,10 +930,12 @@ function ResetZone({ onReset }: { onReset: () => void }) {
 // ─── Anon ID chip ─────────────────────────────────────────────────────────────
 
 function AnonIdChip({ anonId }: { anonId: string }) {
+  const { t } = useTranslation();
   const browser = detectBrowser();
   if (!anonId) return null;
   return (
     <div
+      dir="ltr"
       className="flex flex-col gap-1 self-start px-3.5 py-2.5 rounded-xl"
       style={{
         background: "rgba(10,12,16,0.45)",
@@ -942,7 +945,7 @@ function AnonIdChip({ anonId }: { anonId: string }) {
       }}
     >
       <div className="flex flex-col gap-0.5">
-        <span className="text-[8.5px] uppercase tracking-[0.2em] text-cc-off/25">Your ID</span>
+        <span className="text-[8.5px] uppercase tracking-[0.2em] text-cc-off/25">{t("track.yourId")}</span>
         <span className="font-display text-[12px] tracking-[0.12em]" style={{ color: "var(--phase-accent,#04C9F4)" }}>
           {anonId}
         </span>
