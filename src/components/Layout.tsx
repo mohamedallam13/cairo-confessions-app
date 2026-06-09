@@ -219,13 +219,13 @@ function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void })
       {open && (
         <>
           <motion.div
-            className="fixed inset-0 z-50"
+            className="fixed inset-0 z-[60]"
             style={{ background: "rgba(0,0,0,0.45)" }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={onClose}
           />
           <motion.div
-            className="fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto rounded-t-2xl"
+            className="fixed bottom-0 left-0 right-0 z-[61] max-w-lg mx-auto rounded-t-2xl"
             style={{ background: "rgba(8,10,13,0.98)", border: "1px solid rgba(255,255,255,0.10)", borderBottom: "none", backdropFilter: "blur(24px)" }}
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 32, stiffness: 320 }}
