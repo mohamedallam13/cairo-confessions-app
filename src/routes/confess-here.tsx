@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Lock, Check, Copy, User, MessageSquare } from "lucide-react";
+import { ArrowRight, ArrowLeft, Lock, Check, Copy, User, MessageSquare } from "lucide-react";
 import freyal from "../assets/characters/freyal.png";
 import { getOrCreateAnonId, saveRefToProfile, markIngesting, clearIngesting, markIngestionFailed, removeRefFromProfile, saveSnippet, saveOriginBrowser, detectBrowser, getBrowserDetails } from "../lib/anonIdentity";
 import { submitConfession, type SubmitPayload } from "../lib/confessSubmit";
@@ -906,7 +906,7 @@ function ConfessPage() {
               }}
             >
               {t("confess.continue")}
-              <ArrowRight size={16} strokeWidth={2.4} />
+              {lang === "ar" ? <ArrowLeft size={16} strokeWidth={2.4} /> : <ArrowRight size={16} strokeWidth={2.4} />}
             </button>
           </motion.div>
         )}
