@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, useSearch, Link } from "@tanstack/react-router";
+import { useTranslation } from "../lib/i18n";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, Heart, MessageCircle, Clock, ExternalLink, X, Reply, Check, ChevronRight, ChevronLeft, Copy, ArrowRightLeft, Download, Bell, BellOff } from "lucide-react";
 import { fieldWithPadding } from "../lib/fieldStyles";
@@ -1437,6 +1438,7 @@ function NotificationsToggle({ anonId, confessionSerialNums = [] }: { anonId: st
 // ─── TrackPage ─────────────────────────────────────────────────────────────────
 
 function TrackPage() {
+  const { t } = useTranslation();
   const search = useSearch({ from: "/track" });
   const navigate = useNavigate();
 
@@ -1885,8 +1887,8 @@ function TrackPage() {
         {/* Header */}
         <div className="flex flex-col gap-3">
           <AnonIdChip anonId={anonId} />
-          <h1 className="font-display text-[2rem] uppercase text-cc-off leading-tight">
-            Your<br />confessions.
+          <h1 className="font-display text-[2rem] uppercase text-cc-off leading-tight" dir="ltr">
+            {t("track.pageHeading")}
           </h1>
         </div>
 

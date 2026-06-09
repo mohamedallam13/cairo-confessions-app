@@ -225,6 +225,7 @@ export const en = {
 
   track: {
     metaTitle: "My Confessions — Cairo Confessions",
+    pageHeading: "Your confessions.",
     metaDesc: "See where your confession is.",
     tabStatus: "Status",
     tabMessages: "Messages",

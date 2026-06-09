@@ -225,6 +225,7 @@ export const ar = {
 
   track: {
     metaTitle: "اعترافاتي — Cairo Confessions",
+    pageHeading: "اعترافاتي",
     metaDesc: "شوف فين اعترافك.",
     tabStatus: "الحالة",
     tabMessages: "الرسائل",
