@@ -86,6 +86,29 @@ export const getPushStatus = createServerFn({ method: "GET" }).handler(async (ct
   return { subscribed: sub !== null };
 });
 
+export const sendStatusChangePush = createServerFn({ method: "POST" }).handler(async (ctx) => {
+  const { anonId, newStatus, rejectionReasons } = ctx.data as unknown as {
+    anonId: string;
+    newStatus: string;
+    rejectionReasons?: string;
+  };
+
+  const STATUS_MESSAGES: Record<string, { title: string; body: string }> = {
+    scheduled:   { title: "Cairo Confessions", body: "Your confession is scheduled — going live soon." },
+    posted:      { title: "Cairo Confessions", body: "Your confession is live. Cairo can hear you." },
+    shadowed:    { title: "Cairo Confessions", body: "Your confession is live. Cairo can hear you." },
+    rejected:    { title: "Cairo Confessions", body: rejectionReasons ? `Your confession wasn't posted: ${rejectionReasons}` : "Your confession wasn't posted. Tap for details." },
+    skipped:     { title: "Cairo Confessions", body: "Your confession was skipped this round — may be reconsidered." },
+    new_message: { title: "Cairo Confessions", body: rejectionReasons ? `Someone reached out — ${rejectionReasons}` : "Someone reached out about your confession." },
+  };
+
+  const msg = STATUS_MESSAGES[newStatus];
+  if (!msg) return { ok: false };
+
+  await sendPushToUser(anonId, { ...msg, url: "/track" });
+  return { ok: true };
+});
+
 export const sendDirectPush = createServerFn({ method: "POST" }).handler(async (ctx) => {
   const { subscription, payload } = ctx.data as unknown as {
     subscription: PushSubscriptionJSON;
