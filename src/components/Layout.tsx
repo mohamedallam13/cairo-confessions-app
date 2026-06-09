@@ -3,6 +3,17 @@ import type React from "react";
 import { Link, Outlet, useLocation, useRouter } from "@tanstack/react-router";
 import { HouseHeart, Mail, ChevronLeft, BookOpen, Users, UserCircle, Bell, BellOff, ArrowRightLeft, Trash2 } from "lucide-react";
 
+// Dashed-ring + silhouette — shown when the user is anonymous (no account)
+function AnonProfileIcon({ size = 22, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="11" cy="11" r="9.4" stroke={color} strokeWidth="1.4" strokeDasharray="2.6 2.1" strokeLinecap="round" />
+      <circle cx="11" cy="8.6" r="2.7" stroke={color} strokeWidth="1.4" />
+      <path d="M5.5 17.8C5.5 14.62 8.0 12.05 11 12.05C14.0 12.05 16.5 14.62 16.5 17.8" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 import { getIngestingRefs, getOrCreateAnonId, detectBrowser, getMyRefs, resetIdentity } from "../lib/anonIdentity";
 import { subscribePush, unsubscribePush, sendDirectPush } from "../lib/pushNotifications";
 import { getThreads } from "../lib/reachOut";
@@ -758,7 +769,7 @@ export default function Layout() {
                     className="flex items-center justify-center w-9 h-9 rounded-full transition-all active:scale-90"
                     style={{ color: "rgba(242,242,242,0.45)" }}
                   >
-                    <UserCircle size={22} strokeWidth={1.5} />
+                    <AnonProfileIcon size={22} color="currentColor" />
                   </button>
                 </div>
               </>
@@ -786,7 +797,7 @@ export default function Layout() {
                     className="flex items-center justify-center w-9 h-9 rounded-full transition-all active:scale-90"
                     style={{ color: "rgba(242,242,242,0.45)" }}
                   >
-                    <UserCircle size={22} strokeWidth={1.5} />
+                    <AnonProfileIcon size={22} color="currentColor" />
                   </button>
                 </div>
               </>
