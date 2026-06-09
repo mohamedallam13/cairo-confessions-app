@@ -1357,7 +1357,12 @@ function NotificationsToggle({ anonId }: { anonId: string }) {
         });
         const j = sub.toJSON();
         const subJson = { endpoint: j.endpoint!, keys: { p256dh: j.keys!["p256dh"], auth: j.keys!["auth"] } };
-        await (subscribePush as any)({ data: { anonId, subscription: subJson } });
+        // Collect confession serial numbers so the server can map them for createThread push
+        const cardCache = JSON.parse(localStorage.getItem("cc_card_cache") ?? "{}") as Record<string, { serialNum?: string }>;
+        const confessionSerialNums = Object.values(cardCache)
+          .map(c => parseInt(c.serialNum ?? "", 10))
+          .filter(n => !isNaN(n));
+        await (subscribePush as any)({ data: { anonId, subscription: subJson, confessionSerialNums } });
         await (sendDirectPush as any)({
           data: {
             subscription: subJson,

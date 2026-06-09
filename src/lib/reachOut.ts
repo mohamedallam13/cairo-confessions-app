@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { scheduleDirectPush } from "./pushNotifications";
+import { scheduleDirectPush, getConfessorPushAnonId } from "./pushNotifications";
 import { sanitizeText } from "./sanitize";
 
 function getSupabaseHeaders() {
@@ -185,6 +185,17 @@ export const createThread = createServerFn({ method: "POST" })
       }
     }
 
+    // Push notification to confessor on first message — only if they have push enabled
+    const confessorPushId = await getConfessorPushAnonId(p.confessionSerialNum);
+    console.log(`[createThread:push] serialNum=${p.confessionSerialNum} confessorPushId=${confessorPushId}`);
+    if (confessorPushId) {
+      scheduleDirectPush(confessorPushId, {
+        title: "Cairo Confessions",
+        body: "Someone wants to reach you",
+        url: `/reach?threadId=${p.conversationRef}`,
+      });
+    }
+
     return { success: true };
   });
 
@@ -263,17 +274,17 @@ export const replyToThread = createServerFn({ method: "POST" })
       supabaseUrl(`cc_threads?id=eq.${p.threadId}&select=sender_anon_id,confessor_anon_id,confession_serial_num`),
       { headers },
     );
+    console.log(`[reply:push] fromRole=${p.fromRole} threadFetchOk=${threadFetch.ok}`);
     if (threadFetch.ok) {
       const rows = await threadFetch.json() as Array<{ sender_anon_id: string; confessor_anon_id: string | null; confession_serial_num: number }>;
-      if (rows.length > 0) {
-        const thread = rows[0];
-        const recipientId = p.fromRole === "confessor" ? thread.sender_anon_id : thread.confessor_anon_id;
-        if (recipientId) {
-          const body = p.fromRole === "confessor"
-            ? `Message from Confessor: #${thread.confession_serial_num}`
-            : `Message from ${p.anonId.slice(0, 10)}…`;
-          scheduleDirectPush(recipientId, { title: "Cairo Confessions", body, url: `/reach?threadId=${p.threadId}` });
-        }
+      const thread = rows[0];
+      const recipientId = thread ? (p.fromRole === "confessor" ? thread.sender_anon_id : thread.confessor_anon_id) : null;
+      console.log(`[reply:push] rows=${rows.length} confessor_anon_id=${thread?.confessor_anon_id} recipientId=${recipientId}`);
+      if (recipientId) {
+        const body = p.fromRole === "confessor"
+          ? `Message from Confessor: #${thread.confession_serial_num}`
+          : `Message from ${p.anonId.slice(0, 10)}…`;
+        scheduleDirectPush(recipientId, { title: "Cairo Confessions", body, url: `/reach?threadId=${p.threadId}` });
       }
     }
 

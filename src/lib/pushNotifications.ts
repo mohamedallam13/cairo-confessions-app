@@ -51,13 +51,24 @@ function deleteSub(env: CFEnv | undefined, key: string): Promise<void> {
 }
 
 export const subscribePush = createServerFn({ method: "POST" }).handler(async (ctx) => {
-  const { anonId, subscription } = ctx.data as unknown as {
+  const { anonId, subscription, confessionSerialNums } = ctx.data as unknown as {
     anonId: string;
     subscription: PushSubscriptionJSON;
+    confessionSerialNums?: number[];
   };
 
   const env = getCFEnv();
+  const hasKV = !!env?.PUSH_SUBS;
+  console.log(`[push:subscribe] anonId=${anonId} hasKV=${hasKV} endpoint=${subscription?.endpoint?.slice(0, 50)} serials=${confessionSerialNums?.length ?? 0}`);
   await putSub(env, `sub:${anonId}`, JSON.stringify(subscription));
+
+  // Map each confession serial → this anonId so createThread can push on first message
+  if (confessionSerialNums?.length) {
+    await Promise.all(confessionSerialNums.map(n => putSub(env, `confession_push:${n}`, anonId)));
+    console.log(`[push:subscribe] mapped serials [${confessionSerialNums.join(",")}] → ${anonId}`);
+  }
+
+  console.log(`[push:subscribe] stored sub:${anonId} in ${hasKV ? "KV" : "devStore"}`);
   return { ok: true };
 });
 
@@ -100,6 +111,7 @@ export async function sendPushToUser(
 ): Promise<void> {
   const env = getCFEnv();
   const raw = await getSub(env, `sub:${anonId}`);
+  console.log(`[push:send] anonId=${anonId} subFound=${!!raw} hasKV=${!!env?.PUSH_SUBS}`);
   if (!raw) return;
   const pubKey = env?.VAPID_PUBLIC_KEY ?? process.env["VAPID_PUBLIC_KEY"];
   const privKey = env?.VAPID_PRIVATE_KEY ?? process.env["VAPID_PRIVATE_KEY"];
@@ -121,6 +133,12 @@ export async function sendPushToUser(
       await deleteSub(env, `sub:${anonId}`);
     }
   }
+}
+
+/** Returns the anonId of the confessor who owns this serial number, or null if not registered. */
+export async function getConfessorPushAnonId(serialNum: number): Promise<string | null> {
+  const env = getCFEnv();
+  return getSub(env, `confession_push:${serialNum}`);
 }
 
 /** Fire push and extend CF Worker lifetime via waitUntil so it completes after response is sent. */
