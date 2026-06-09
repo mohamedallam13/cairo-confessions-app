@@ -314,11 +314,11 @@ export const ar = {
   },
 
   community: {
-    tabEvents: "الفعاليات",
-    tabChat: "دردشة المجتمع",
+    tabEvents: "إيفنتات",
+    tabChat: "شات المجتمع",
     eventsTitle: "كوميونيتي",
     eventsBody: "بيتك لكل اللي بيحصل في مجتمع Cairo Confessions — فعاليات، مجموعات دعم، ورش عمل، وأكتر. قريباً.",
-    chatTitle: "دردشة المجتمع",
+    chatTitle: "شات المجتمع",
     chatBody: "مساحة مشتركة لمجتمع Cairo Confessions. قريباً.",
   },
 
@@ -363,8 +363,9 @@ export const ar = {
   install: {
     tagline: "حمّل التطبيق",
     howTo: "إزاي تثبّته",
-    ios_step1: "اضغط على زر Share في أسفل Safari",
-    ios_step2: "اختار «Add to Home Screen»",
+    ios_step1: "اضغط على زر Share (↑) في Safari",
+    ios_step2: "انزّل في القائمة — لو مش لاقيه اضغط «View More»",
+    ios_step3: "اختار «Add to Home Screen»",
     android_step1: "اضغط على القائمة (⋮) في أعلى يمين المتصفح",
     android_step2: "اختار «Add to Home Screen»",
     addToHomeScreen: "أضف للشاشة الرئيسية",

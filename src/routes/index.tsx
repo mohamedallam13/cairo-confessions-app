@@ -28,7 +28,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
 
   return (
     <div
@@ -65,13 +65,13 @@ function Home() {
       </section>
 
       {/* Headline + description */}
-      <section className="flex flex-col gap-3 mt-6">
-        <h1 className="font-display text-[3rem] leading-[1.0] uppercase tracking-tight text-cc-off">
+      <section className="flex flex-col gap-3 mt-6" dir={lang === "ar" ? "rtl" : "ltr"}>
+        <h1 className={`font-display text-[3rem] uppercase tracking-tight text-cc-off ${lang === "ar" ? "leading-[1.35]" : "leading-[1.0]"}`}>
           {t("landing.headline1")}<br />
           <span style={{ color: "var(--phase-accent, #04C9F4)", transition: "color 2.5s ease" }}>{t("landing.headline2")}</span><br />
           {t("landing.headline3")}
         </h1>
-        <p className="text-cc-off/45 text-[13px] leading-[1.8] max-w-[270px] font-light">
+        <p className={`text-cc-off/45 text-[13px] leading-[1.8] font-light ${lang === "ar" ? "max-w-[340px]" : "max-w-[270px]"}`}>
           {t("landing.tagline")}
         </p>
       </section>

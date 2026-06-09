@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
-import { X, Share, MoreVertical, Plus } from "lucide-react";
+import { X, Share, MoreVertical, Plus, ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "../lib/i18n";
 import logoIcon from "../assets/logo-icon.png";
-
-const DISMISSED_KEY = "cc_install_dismissed";
 
 function isPWA() {
   return (
@@ -27,7 +25,6 @@ export default function InstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
-    if (localStorage.getItem(DISMISSED_KEY)) return;
     if (isPWA()) return;
 
     if (isIOS()) {
@@ -47,7 +44,7 @@ export default function InstallBanner() {
 
     // Fallback: Android browser with no prompt API (Samsung Internet, Firefox, etc.)
     const fallbackTimer = setTimeout(() => {
-      if (!localStorage.getItem(DISMISSED_KEY) && !isPWA()) {
+      if (!isPWA()) {
         setMode("android-manual");
         setVisible(true);
       }
@@ -60,15 +57,13 @@ export default function InstallBanner() {
   }, []);
 
   function dismiss() {
-    localStorage.setItem(DISMISSED_KEY, "1");
     setVisible(false);
   }
 
   async function install() {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") localStorage.setItem(DISMISSED_KEY, "1");
+    await deferredPrompt.userChoice;
     setDeferredPrompt(null);
     setVisible(false);
   }
@@ -118,16 +113,9 @@ export default function InstallBanner() {
               {mode === "ios" && (
                 <>
                   <p className="text-[10px] uppercase tracking-[0.2em] text-cc-off/30 mb-1">{t("install.howTo")}</p>
-                  <Step
-                    num={1}
-                    icon={<Share size={15} strokeWidth={1.8} />}
-                    text={t("install.ios_step1")}
-                  />
-                  <Step
-                    num={2}
-                    icon={<Plus size={15} strokeWidth={2} />}
-                    text={t("install.ios_step2")}
-                  />
+                  <Step num={1} icon={<Share size={15} strokeWidth={1.8} />} text={t("install.ios_step1")} />
+                  <Step num={2} icon={<ChevronDown size={15} strokeWidth={2} />} text={t("install.ios_step2")} />
+                  <Step num={3} icon={<Plus size={15} strokeWidth={2} />} text={t("install.ios_step3")} />
                 </>
               )}
 

@@ -363,8 +363,9 @@ export const en = {
   install: {
     tagline: "Install App",
     howTo: "How to install",
-    ios_step1: "Tap the Share button at the bottom of Safari",
-    ios_step2: "Select \"Add to Home Screen\"",
+    ios_step1: "Tap the Share button (↑) in Safari",
+    ios_step2: "Scroll down the sheet — tap \"View More\" if you don't see it",
+    ios_step3: "Select \"Add to Home Screen\"",
     android_step1: "Tap the menu (⋮) at the top right of your browser",
     android_step2: "Select \"Add to Home Screen\"",
     addToHomeScreen: "Add to Home Screen",

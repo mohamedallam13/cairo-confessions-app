@@ -362,7 +362,7 @@ function ProfileSheet({ open, onClose }: { open: boolean; onClose: () => void })
                         : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(242,242,242,0.35)" }
                       }
                     >
-                      {l === "en" ? "English" : "العربية"}
+                      {l === "en" ? "English" : "عربي"}
                     </button>
                   ))}
                 </div>
