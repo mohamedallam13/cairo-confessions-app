@@ -144,7 +144,7 @@ function SessionConflictModal({
 const PHASE_ORDER: Phase[] = ["dawn", "morning", "midday", "sunset", "dusk", "night"];
 
 function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [override, setOverride] = useState<Phase | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -182,6 +182,7 @@ function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
             className="absolute end-0 top-full mt-2 z-50 rounded-xl overflow-hidden py-1 min-w-[120px]"
+            dir={lang === "ar" ? "rtl" : "ltr"}
             style={{ background: "rgba(10,12,15,0.96)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(16px)" }}
           >
             <button

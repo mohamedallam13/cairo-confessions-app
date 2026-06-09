@@ -320,9 +320,9 @@ export const ar = {
 
   phases: {
     dawn: "فجر",
-    morning: "صبح",
-    midday: "ضهرية",
-    sunset: "عصري",
+    morning: "صبحية",
+    midday: "ظهرية",
+    sunset: "عصاري",
     dusk: "شفق",
     night: "ليل",
   },
