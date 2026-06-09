@@ -314,12 +314,33 @@ export const ar = {
   },
 
   community: {
-    tabEvents: "الفعاليات",
-    tabChat: "دردشة المجتمع",
+    tabEvents: "إيفنتات",
+    tabChat: "شات المجتمع",
     eventsTitle: "كوميونيتي",
     eventsBody: "بيتك لكل اللي بيحصل في مجتمع Cairo Confessions — فعاليات، مجموعات دعم، ورش عمل، وأكتر. قريباً.",
-    chatTitle: "دردشة المجتمع",
+    chatTitle: "شات المجتمع",
     chatBody: "مساحة مشتركة لمجتمع Cairo Confessions. قريباً.",
+  },
+
+  events: {
+    filterAll: "الكل",
+    book: "احجز",
+    signInToBook: "سجّل دخولك عشان تحجز",
+    alreadyBooked: "محجوز ✓",
+    seeEvent: "شوف الفعالية →",
+    hosted: "بيقدمها",
+    doors: "الأبواب",
+    payWith: "ادفع بـ",
+    instapay: "InstaPay",
+    whatsapp: "واتساب",
+    iHavePaid: "دفعت",
+    bookingReceived: "استلمنا الحجز",
+    bookingNote: "هنأكدلك خلال ٢٤ ساعة. رجّع هنا لمتابعة الحالة.",
+    pendingBadge: "قيد التأكيد",
+    confirmedBadge: "مؤكد ✓",
+    externalTag: "من القاهرة",
+    cancel: "إلغاء",
+    done: "تمام",
   },
 
   phases: {
@@ -329,6 +350,25 @@ export const ar = {
     sunset: "عصاري",
     dusk: "شفق",
     night: "ليل",
+  },
+
+  pwaNotify: {
+    title: "ابقى على علم",
+    subtitle: "اعرف لما القاهرة تسمعك",
+    body: "هنعلّمك في اللحظة اللي اعترافك فيها يتنشر — أو لما حد يتواصل معاك.",
+    enable: "فعّل الإشعارات",
+    notNow: "مش دلوقتي",
+  },
+
+  install: {
+    tagline: "حمّل التطبيق",
+    howTo: "إزاي تثبّته",
+    ios_step1: "اضغط على زر Share (↑) في Safari",
+    ios_step2: "انزّل في القائمة — لو مش لاقيه اضغط «View More»",
+    ios_step3: "اختار «Add to Home Screen»",
+    android_step1: "اضغط على القائمة (⋮) في أعلى يمين المتصفح",
+    android_step2: "اختار «Add to Home Screen»",
+    addToHomeScreen: "أضف للشاشة الرئيسية",
   },
 
   errors: {

@@ -829,7 +829,7 @@ function ConfessionCard({ refNum, result, onOpen }: { refNum: string; result: Tr
 // ─── Search bar ───────────────────────────────────────────────────────────────
 
 function RefSearchBar({ onSearch }: { onSearch: (ref: string) => void }) {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [input, setInput] = useState("");
   const [err, setErr]     = useState("");
 
@@ -844,7 +844,7 @@ function RefSearchBar({ onSearch }: { onSearch: (ref: string) => void }) {
   }
 
   return (
-    <div className="space-y-2" dir="ltr">
+    <div className="space-y-2" dir={lang === "ar" ? "rtl" : "ltr"}>
       <div
         className="flex gap-2 p-1.5"
         style={{
@@ -1441,7 +1441,7 @@ function NotificationsToggle({ anonId, confessionSerialNums = [] }: { anonId: st
 // ─── TrackPage ─────────────────────────────────────────────────────────────────
 
 function TrackPage() {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const search = useSearch({ from: "/track" });
   const navigate = useNavigate();
 
@@ -1890,7 +1890,7 @@ function TrackPage() {
         {/* Header */}
         <div className="flex flex-col gap-3">
           <AnonIdChip anonId={anonId} />
-          <h1 className="font-display text-[2rem] uppercase text-cc-off leading-tight" dir="ltr">
+          <h1 className="font-display text-[2rem] uppercase text-cc-off leading-tight" dir={lang === "ar" ? "rtl" : "ltr"}>
             {t("track.pageHeading")}
           </h1>
         </div>
@@ -1976,7 +1976,7 @@ function TrackPage() {
 
       <div className="flex flex-col gap-3">
         <AnonIdChip anonId={anonId} />
-        <h1 className="font-display text-[2rem] uppercase text-cc-off leading-tight">
+        <h1 className="font-display text-[2rem] uppercase text-cc-off leading-tight" dir={lang === "ar" ? "rtl" : "ltr"}>
           Your confession<br />is still there.
         </h1>
       </div>
