@@ -1,5 +1,7 @@
 import "./lib/error-capture";
 import { sendPushToAll } from "./lib/pushNotifications";
+import { withSentry } from "@sentry/cloudflare";
+import { SENTRY_DSN } from "./lib/sentry";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
@@ -67,7 +69,12 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   return brandedErrorResponse();
 }
 
-export default {
+export default withSentry(
+  () => ({
+    dsn: SENTRY_DSN,
+    tracesSampleRate: 0,
+  }),
+{
   async scheduled(_event: unknown, env: unknown, _ctx: unknown) {
     await sendPushToAll(env as Parameters<typeof sendPushToAll>[0]);
   },
@@ -105,4 +112,4 @@ export default {
       return brandedErrorResponse();
     }
   },
-};
+});

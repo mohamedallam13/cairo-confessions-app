@@ -7,6 +7,16 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import * as Sentry from "@sentry/react";
+import { SENTRY_DSN } from "../lib/sentry";
+
+if (typeof window !== "undefined" && SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    tracesSampleRate: 0,
+    integrations: [],
+  });
+}
 
 import appCss from "../styles.css?url";
 import Layout from "../components/Layout";
@@ -36,6 +46,7 @@ function NotFoundComponent() {
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
+  if (typeof window !== "undefined" && SENTRY_DSN) Sentry.captureException(error);
   const router = useRouter();
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
