@@ -42,8 +42,9 @@ export function LangProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = lang;
+    // Layout stays LTR — Arabic text renders naturally within its own flow
+    document.documentElement.dir = "ltr";
   }, [lang]);
 
   function setLang(l: Lang) {

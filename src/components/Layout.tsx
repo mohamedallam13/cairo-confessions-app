@@ -144,7 +144,6 @@ function SessionConflictModal({
 const PHASE_ORDER: Phase[] = ["dawn", "morning", "midday", "sunset", "dusk", "night"];
 
 function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
-  const { t } = useTranslation();
   const [override, setOverride] = useState<Phase | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -167,14 +166,14 @@ function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
   return (
     <div className="relative">
       <div className="flex items-center gap-2">
-        <span className="text-[8px] uppercase tracking-[0.2em] text-cc-off/25">{t("layout.mood")}</span>
+        <span className="text-[8px] uppercase tracking-[0.2em] text-cc-off/25">Mood</span>
         <button
           onClick={() => setOpen((o) => !o)}
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9.5px] uppercase tracking-[0.16em] transition-all active:scale-95"
           style={{ background: `rgba(${accent}, 0.12)`, border: `1px solid rgba(${accent}, 0.25)`, color: `rgba(${accent}, 0.85)` }}
         >
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: `rgba(${accent}, 0.9)` }} />
-          {override ? PHASES[override].label : `${t("layout.auto")} · ${PHASES[currentPhase].label}`}
+          {override ? PHASES[override].label : `Auto · ${PHASES[currentPhase].label}`}
         </button>
       </div>
       {open && (
@@ -190,7 +189,7 @@ function PhasePicker({ currentPhase }: { currentPhase: Phase }) {
               style={{ color: !override ? "rgba(242,242,242,0.85)" : "rgba(242,242,242,0.35)" }}
             >
               <span className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }} />
-              {t("layout.auto")} · {PHASES[currentPhase].label}
+              Auto · {PHASES[currentPhase].label}
               {!override && <span className="ms-auto text-[8px] opacity-50">✓</span>}
             </button>
             <div className="mx-3 my-1 border-t border-white/8" />

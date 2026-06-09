@@ -277,13 +277,13 @@ export const ar = {
 
   profile: {
     notifications: "الإشعارات",
-    pushNotifications: "إشعارات الجهاز",
+    pushNotifications: "الإشعارات",
     session: "الجلسة",
-    transferSession: "نقل الجلسة",
-    resetSession: "إعادة ضبط الجلسة",
+    transferSession: "انقل جلستي",
+    resetSession: "امسح بياناتي",
     resetConfirm: "ده هيمسح اعترافاتك وهويتك من المتصفح ده. تقدر ترجعهم بعدين بلينك النقل.",
     yesRemove: "أيوه، امسحه",
-    cancel: "إلغاء",
+    cancel: "لأ، سيبه",
   },
 
   layout: {
