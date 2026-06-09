@@ -596,6 +596,16 @@ export default function Layout() {
       <CairoBackground phase={phase} />
       <ProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} />
 
+      {/* Mood picker floats top-right on landing page (header hidden there) */}
+      {isHome && (
+        <div
+          className="fixed right-5 z-30"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}
+        >
+          <PhasePicker currentPhase={phase} />
+        </div>
+      )}
+
       {/* Header — hidden on landing page */}
       {!isHome && (
         <header
